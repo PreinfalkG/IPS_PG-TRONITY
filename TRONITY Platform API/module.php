@@ -145,18 +145,25 @@ require_once __DIR__ . '/../libs/COMMON.php';
 		public function Timer_AutoUpdate() {
 
 			if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Timer_AutoUpdate called ...", 0); }
-			$this->UpdateBulk("AutoUpdateTimer");
-						
+
+			$skipUdateSec = 600;
+			$lastUpdate  = time() - round(IPS_GetVariable($this->GetIDForIdent("updateCntError"))["VariableUpdated"]);
+			if ($lastUpdate > $skipUdateSec) {
+
+				$this->UpdateBulk("AutoUpdateTimer");
+
+			} else {
+				SetValue($this->GetIDForIdent("updateCntSkip"), GetValue($this->GetIDForIdent("updateCntSkip")) + 1);
+				$logMsg =  sprintf("INFO :: Skip Update for %d sec for Instance '%s' [%s] >> last error %d seconds ago...", $skipUdateSec, $this->InstanceID, IPS_GetName($this->InstanceID),  $lastUpdate);
+				if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, $logMsg, 0); }
+				IPS_LogMessage("[" . __CLASS__ . "] - " . __FUNCTION__, $logMsg);
+			}						
 		}
 
 
 		public function UpdateBulk(string $Text) {
 
 			if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update Bulk ...", 0); }
-
-			$skipUdateSec = 600;
-			$lastUpdate  = time() - round(IPS_GetVariable($this->GetIDForIdent("updateCntError"))["VariableUpdated"]);
-			if ($lastUpdate > $skipUdateSec) {
 
 				$currentStatus = $this->GetStatus();
 				if($currentStatus == 102) {		
@@ -233,8 +240,8 @@ require_once __DIR__ . '/../libs/COMMON.php';
 							$errorMsg = sprintf("HTTP_RESPONSE_HEADER Error '400': %s", print_r($http_response_header, true));
 							SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
 							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, $errorMsg, 0); }
-							SetValueInteger($this->GetIDForIdent("api_accessToken"), "");
-							SetValueInteger($this->GetIDForIdent("api_accessToken_expires"), 0);
+							SetValue($this->GetIDForIdent("api_accessToken"), "");
+							SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);
 
 						} else {
 							SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
@@ -256,12 +263,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 					//SetValue($this->GetIDForIdent("instanzInactivCnt"), GetValue($this->GetIDForIdent("instanzInactivCnt")) + 1);
 					if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, sprintf("Instanz '%s - [%s]' not activ [Status=%s]", $this->InstanceID, IPS_GetName($this->InstanceID), $currentStatus), 0); }
 				}
-			} else {
-				SetValue($this->GetIDForIdent("updateCntSkip"), GetValue($this->GetIDForIdent("updateCntSkip")) + 1);
-				$logMsg =  sprintf("INFO :: Skip Update for %d sec for Instance '%s' [%s] >> last error %d seconds ago...", $skipUdateSec, $this->InstanceID, IPS_GetName($this->InstanceID),  $lastUpdate);
-				if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, $logMsg, 0); }
-				IPS_LogMessage("[" . __CLASS__ . "] - " . __FUNCTION__, $logMsg);
-			}
+				
 		}
 
 		public function UpdateApiAccessToken() {

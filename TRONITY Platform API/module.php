@@ -63,10 +63,10 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			$this->RegisterPropertyInteger("TimerInterval", 240);		
 			$this->RegisterPropertyInteger("LogLevel", 4);
 
-			$this->RegisterPropertyString("tbClientId", "be7aa3d9-28bc-4670-a6c6-599a7098c205");
-			$this->RegisterPropertyString("tbClientSecret", "333b4871-f061-474a-860c-6845abb2f39a");
+			$this->RegisterPropertyString("tbClientId", "");
+			$this->RegisterPropertyString("tbClientSecret", "");
 			$this->RegisterPropertyString("tbGrantType", "app");
-			$this->RegisterPropertyString("tbVehicleId", "61fac1b78a3951001254a06f");
+			$this->RegisterPropertyString("tbVehicleId", "");
 
 			$this->RegisterTimer('Timer_AutoUpdate', 0, 'TPA_Timer_AutoUpdate($_IPS["TARGET"]);');
 

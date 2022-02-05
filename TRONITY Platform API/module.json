@@ -1,0 +1,12 @@
+{
+    "id": "{62F9ADE2-6F6F-62FB-DC2D-6A5497A9045B}",
+    "name": "TRONITY Platform API",
+    "type": 3,
+    "vendor": "TRONITY",
+    "aliases": [],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "TPA",
+    "url": "https://www.platform.tronity.io/"
+}

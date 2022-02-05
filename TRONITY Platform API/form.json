@@ -1,0 +1,103 @@
+{
+    "elements": [
+        {
+            "name": "AutoUpdate",
+            "type": "CheckBox",
+            "caption": "Auto Update"
+        },
+        {
+            "name": "TimerInterval",
+            "type": "NumberSpinner",
+            "caption": "Update Interval [sec]"
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "TRONITY Platform Application Settings",
+            "expanded": true,
+            "visible": true,
+            "items": [
+                { "name": "tbVehicleId", "type": "ValidationTextBox", "caption": "Vehicle ID" },
+                { "name": "tbClientId", "type": "ValidationTextBox", "caption": "API Client Id" },
+                { "name": "tbClientSecret", "type": "ValidationTextBox", "caption": "API Client Secret" },
+                { "name": "tbGrantType", "type": "ValidationTextBox", "caption": "API Grant Type" }
+                
+            ]
+        },        
+        {
+            "name": "LogLevel",
+            "type": "Select",
+            "caption": "Debug/Log Level",
+            "options": [
+                {
+                    "label": "ALL",
+                    "value": 9
+                },
+                {
+                    "label": "TEST",
+                    "value": 8
+                },
+                {
+                    "label": "TRACE",
+                    "value": 7
+                },
+                {
+                    "label": "COMMUNICATION",
+                    "value": 6
+                },
+                {
+                    "label": "DEBUG",
+                    "value": 5
+                },
+                {
+                    "label": "INFO",
+                    "value": 4
+                },
+                {
+                    "label": "WARN",
+                    "value": 3
+                },
+                {
+                    "label": "ERROR",
+                    "value": 2
+                },
+                {
+                    "label": "FATAL",
+                    "value": 1
+                },
+                {
+                    "label": "OFF",
+                    "value": 0
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "ExpansionPanel",
+            "caption": "Manual Update Requests",
+            "expanded": false,
+            "visible": true,
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "Update Vehicle Bulk Data",
+                    "onClick": "TPA_UpdateBulk($id, '');"
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Reset and Delete Funkctions",
+            "expanded": false,
+            "visible": true,
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "Reset Update Variables",
+                    "onClick": "TPA_ResetUpdateVariables($id, '');"
+                }
+            ]
+        }
+    ],
+    "status": []
+}

@@ -1,0 +1,12 @@
+{
+    "id": "{AD538763-7FA7-0063-D0B7-3B2127D7EBE6}",
+    "name": "TRONITY",
+    "author": "Preinfalk Günter",
+    "url": "https://www.tronity.io/",
+    "compatibility": {
+        "version": "5.5"
+    },
+    "version": "0.1",
+    "build": 1,
+    "date": 1644033502
+}

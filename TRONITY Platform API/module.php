@@ -228,8 +228,46 @@ require_once __DIR__ . '/../libs/COMMON.php';
 		
 								SetValue($this->GetIDForIdent("level"), $level);
 								SetValue($this->GetIDForIdent("range"), $range);
-								SetValue($this->GetIDForIdent("chargingStatus"), $charging);
+								SetValue($this->GetIDForIdent("chargingStatusTxt"), $charging);
+								
+								$chargingStatus = -99;
+								switch($charging) {
+									case "Disconnected";
+										$chargingStatus = 0;
+										break;
+									case "NoPower";
+										$chargingStatus = 1;
+										break;		
+									case "Starting";
+										$chargingStatus = 2;
+										break;										
+									case "Charging";
+										$chargingStatus = 3;
+										break;										
+									case "Complete";
+										$chargingStatus = 4;
+										break;										
+									case "Stopped";
+										$chargingStatus = 5;
+										break;										
+									case "Error";
+										$chargingStatus = 10;
+										break;										
+									default:
+										$chargingStatus = 11;
+									break;
+								}
+								SetValue($this->GetIDForIdent("chargingStatus"), $chargingStatus);
+
 								SetValue($this->GetIDForIdent("timestamp"), round($timestamp/1000));
+
+
+								$calcBattEnergyLeft = 58/100 * $level;
+								SetValue($this->GetIDForIdent("calcBattEnergyLeft"), round($calcBattEnergyLeft,1));
+
+								$calcConsumption = $calcBattEnergyLeft / $range * 100;
+								SetValue($this->GetIDForIdent("calcConsumption"), round($calcConsumption,1));
+
 
 								SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
 								if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE",0); }
@@ -309,34 +347,68 @@ require_once __DIR__ . '/../libs/COMMON.php';
 		protected function RegisterProfiles() {
 
 
-			if ( !IPS_VariableProfileExists('TRONITY.level') ) {
-				IPS_CreateVariableProfile('TRONITY.level', VARIABLE::TYPE_INTEGER );
-				IPS_SetVariableProfileDigits('TRONITY.level', 0 );
-				IPS_SetVariableProfileText('TRONITY.level', "", " %" );
-				IPS_SetVariableProfileValues('TRONITY.level', 0, 100, 1);
+			if ( !IPS_VariableProfileExists('EV.level') ) {
+				IPS_CreateVariableProfile('EV.level', VARIABLE::TYPE_INTEGER );
+				IPS_SetVariableProfileDigits('EV.level', 0 );
+				IPS_SetVariableProfileText('EV.level', "", " %" );
+				IPS_SetVariableProfileValues('EV.level', 0, 100, 1);
 			} 
-			if ( !IPS_VariableProfileExists('TRONITY.km') ) {
-				IPS_CreateVariableProfile('TRONITY.km', VARIABLE::TYPE_INTEGER );
-				IPS_SetVariableProfileDigits('TRONITY.km', 0 );
-				IPS_SetVariableProfileText('TRONITY.km', "", " km" );
-				//IPS_SetVariableProfileValues('GEN24.Prozent', 0, 0, 0);
+			if ( !IPS_VariableProfileExists('EV.km') ) {
+				IPS_CreateVariableProfile('EV.km', VARIABLE::TYPE_INTEGER );
+				IPS_SetVariableProfileDigits('EV.km', 0 );
+				IPS_SetVariableProfileText('EV.km', "", " km" );
+				//IPS_SetVariableProfileValues('EV.km', 0, 0, 0);
+			} 		
+			
+			if ( !IPS_VariableProfileExists('EV.ChargingStatus') ) {
+				IPS_CreateVariableProfile('EV.ChargingStatus', VARIABLE::TYPE_INTEGER );
+				IPS_SetVariableProfileText('EV.ChargingStatus', "", "" );
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', -1, "[%d] unknown", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 0, "[%d] Disconnected", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 1, "[%d] NoPower", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 2, "[%d] Starting", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 3, "[%d] Charging", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 4, "[%d] Complete", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 5, "[%d] Stopped", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 6, "[%d] unknown", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 7, "[%d] unknown", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 8, "[%d] unknown", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 9, "[%d] unknown", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 10, "[%d] Error", "", -1);
+				IPS_SetVariableProfileAssociation ('EV.ChargingStatus', 11, "[%d] unknown", "", -1);
+			}   			
+
+
+			if ( !IPS_VariableProfileExists('EV.kWh') ) {
+				IPS_CreateVariableProfile('EV.kWh', VARIABLE::TYPE_FLOAT );
+				IPS_SetVariableProfileDigits('EV.kWh', 1 );
+				IPS_SetVariableProfileText('EV.kWh', "", " kWh" );
+				//IPS_SetVariableProfileValues('EV.kWh', 0, 0, 0);
+			} 
+
+			if ( !IPS_VariableProfileExists('EV.kWh_100km') ) {
+				IPS_CreateVariableProfile('EV.kWh_100km', VARIABLE::TYPE_FLOAT );
+				IPS_SetVariableProfileDigits('EV.kWh_100km', 1 );
+				IPS_SetVariableProfileText('EV.kWh_100km', "", " kWh/100km" );
+				//IPS_SetVariableProfileValues('GEN24.Prozent.2', 0, 0, 0);
 			} 			
+
 			if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, "Profiles registered", 0); }
 		}
 
 		protected function RegisterVariables() {
 			
-			$varId = $this->RegisterVariableInteger("level", "Batterie Ladezustand", "TRONITY.level", 100);
-			AC_SetLoggingStatus($this->archivInstanzID, $varId, true);
+			$varId = $this->RegisterVariableInteger("level", "Batterie Ladezustand", "EV.level", 100);
+			//AC_SetLoggingStatus($this->archivInstanzID, $varId, true);
 
-			$varId = $this->RegisterVariableInteger("range", "Geschätzte Reichweite", "TRONITY.km", 110);
-			AC_SetLoggingStatus($this->archivInstanzID, $varId, true);			
+			$varId = $this->RegisterVariableInteger("range", "Geschätzte Reichweite", "EV.km", 110);
+			//AC_SetLoggingStatus($this->archivInstanzID, $varId, true);			
 
 
-			$varId = $this->RegisterVariableInteger("charging", "Charging", "", 150);
+			$varId = $this->RegisterVariableInteger("chargingStatus", "Charging Status", "EV.ChargingStatus", 150);
 			IPS_SetHidden($varId, true);
 
-			$varId = $this->RegisterVariableString("chargingStatus", "Charging Status", "", 151);
+			$varId = $this->RegisterVariableString("chargingStatusTxt", "Charging Status", "", 151);
 			IPS_SetHidden($varId, true);
 
 			$varId = $this->RegisterVariableInteger("chargeRemainingTime", "Charge Remaining Time", "", 160);
@@ -352,6 +424,13 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			IPS_SetHidden($varId, true);
 
 			$varId = $this->RegisterVariableInteger("timestamp", "Timestamp", "~UnixTimestamp", 300);
+
+
+			$varId = $this->RegisterVariableFloat("calcBattEnergyLeft", "[calc] verbleibende Batteriekapazität", "EV.kWh", 400);
+			IPS_SetHidden($varId, true);
+
+			$varId = $this->RegisterVariableFloat("calcConsumption", "[calc] Verbrauch", "EV.kWh_100km", 401);
+			IPS_SetHidden($varId, true);			
 
 
 			$this->RegisterVariableInteger("updateCntOk", "Update Cnt", "", 900);

@@ -262,6 +262,8 @@ require_once __DIR__ . '/../libs/COMMON.php';
 								SetValue($this->GetIDForIdent("timestamp"), round($timestamp/1000));
 
 
+								$calcBattEnergyLeftTEMP = GetValue($this->GetIDForIdent("calcBattEnergyLeft"));
+
 								$calcBattEnergyLeft = 58/100 * $level;
 								SetValue($this->GetIDForIdent("calcBattEnergyLeft"), round($calcBattEnergyLeft,1));
 
@@ -273,6 +275,15 @@ require_once __DIR__ . '/../libs/COMMON.php';
 
 								$calcPercentOfWLTP = 100 / 424 * $calcEstimatedRangeOnFullCharge;
 								SetValue($this->GetIDForIdent("calcPercentOfWLTP"), round($calcPercentOfWLTP,1));
+
+								$calcBattEnergyDiff = $calcBattEnergyLeft - $calcBattEnergyLeftTEMP;
+								if($calcBattEnergyDiff > 0) {
+									$calcBattChargedTemp = GetValue($this->GetIDForIdent("calcBattCharged"));
+									SetValue($this->GetIDForIdent("calcBattCharged"), round($calcBattChargedTemp + abs($calcBattEnergyDiff),1));
+								} if($calcBattEnergyDiff < 0) {
+									$calcBattDisChargedTemp = GetValue($this->GetIDForIdent("calcBattDisCharged"));
+									SetValue($this->GetIDForIdent("calcBattDisCharged"), round($calcBattDisChargedTemp + abs($calcBattEnergyDiff),1));	
+								}
 
 
 								SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
@@ -450,6 +461,12 @@ require_once __DIR__ . '/../libs/COMMON.php';
 
 			$varId = $this->RegisterVariableFloat("calcPercentOfWLTP", "[calc] Prozent von WLTP [424km]", "EV.Percent", 403);
 			IPS_SetHidden($varId, true);		
+
+			$varId = $this->RegisterVariableFloat("calcBattCharged", "[calc] Batterie geladen", "EV.kWh", 410);
+			IPS_SetHidden($varId, true);
+
+			$varId = $this->RegisterVariableFloat("calcBattDisCharged", "[calc] Batterie entladen", "EV.kWh", 411);
+			IPS_SetHidden($varId, true);			
 
 
 			$this->RegisterVariableInteger("updateCntOk", "Update Cnt", "", 900);

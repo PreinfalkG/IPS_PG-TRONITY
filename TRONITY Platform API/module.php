@@ -268,6 +268,9 @@ require_once __DIR__ . '/../libs/COMMON.php';
 								$calcConsumption = $calcBattEnergyLeft / $range * 100;
 								SetValue($this->GetIDForIdent("calcConsumption"), round($calcConsumption,1));
 
+								$calcEstimatedRangeOnFullCharge = $range / $level * 100;
+								SetValue($this->GetIDForIdent("calcEstimatedRangeOnFullCharge"), round($calcEstimatedRangeOnFullCharge));
+
 
 								SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
 								if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE",0); }
@@ -430,7 +433,10 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			IPS_SetHidden($varId, true);
 
 			$varId = $this->RegisterVariableFloat("calcConsumption", "[calc] Verbrauch", "EV.kWh_100km", 401);
-			IPS_SetHidden($varId, true);			
+			IPS_SetHidden($varId, true);	
+			
+			$varId = $this->RegisterVariableInteger("calcEstimatedRangeOnFullCharge", "[calc] Geschätzte Reichweite bei voller Ladung", "EV.km", 402);
+			IPS_SetHidden($varId, true);				
 
 
 			$this->RegisterVariableInteger("updateCntOk", "Update Cnt", "", 900);

@@ -73,17 +73,9 @@
     ],
     "actions": [
         {
-            "type": "ExpansionPanel",
-            "caption": "Manual Update Requests",
-            "expanded": false,
-            "visible": true,
-            "items": [
-                {
-                    "type": "Button",
-                    "caption": "Update Vehicle Bulk Data",
-                    "onClick": "TPA_UpdateBulk($id, '');"
-                }
-            ]
+            "type": "Button",
+            "caption": "Update Vehicle Bulk Data",
+            "onClick": "TPA_UpdateBulk($id, '');"
         },
         {
             "type": "ExpansionPanel",

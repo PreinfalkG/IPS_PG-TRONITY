@@ -271,6 +271,9 @@ require_once __DIR__ . '/../libs/COMMON.php';
 								$calcEstimatedRangeOnFullCharge = $range / $level * 100;
 								SetValue($this->GetIDForIdent("calcEstimatedRangeOnFullCharge"), round($calcEstimatedRangeOnFullCharge));
 
+								$calcPercentOfWLTP = 100 / 424 * $calcEstimatedRangeOnFullCharge;
+								SetValue($this->GetIDForIdent("calcPercentOfWLTP"), round($calcPercentOfWLTP,1));
+
 
 								SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
 								if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE",0); }
@@ -393,8 +396,15 @@ require_once __DIR__ . '/../libs/COMMON.php';
 				IPS_CreateVariableProfile('EV.kWh_100km', VARIABLE::TYPE_FLOAT );
 				IPS_SetVariableProfileDigits('EV.kWh_100km', 1 );
 				IPS_SetVariableProfileText('EV.kWh_100km', "", " kWh/100km" );
-				//IPS_SetVariableProfileValues('GEN24.Prozent.2', 0, 0, 0);
+				//IPS_SetVariableProfileValues('EV.kWh_100km', 0, 0, 0);
 			} 			
+
+			if ( !IPS_VariableProfileExists('EV.Percent') ) {
+				IPS_CreateVariableProfile('EV.Percent', VARIABLE::TYPE_FLOAT );
+				IPS_SetVariableProfileDigits('EV.Percent', 1 );
+				IPS_SetVariableProfileText('EV.Percent', "", " %" );
+				//IPS_SetVariableProfileValues('EV.Percent', 0, 0, 0);
+			} 	
 
 			if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, "Profiles registered", 0); }
 		}
@@ -437,6 +447,9 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			
 			$varId = $this->RegisterVariableInteger("calcEstimatedRangeOnFullCharge", "[calc] Geschätzte Reichweite bei voller Ladung", "EV.km", 402);
 			IPS_SetHidden($varId, true);				
+
+			$varId = $this->RegisterVariableFloat("calcPercentOfWLTP", "[calc] Prozent von WLTP [424km]", "EV.Percent", 403);
+			IPS_SetHidden($varId, true);		
 
 
 			$this->RegisterVariableInteger("updateCntOk", "Update Cnt", "", 900);

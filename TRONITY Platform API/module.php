@@ -51,8 +51,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 
 
 
-		public function Create()
-		{
+		public function Create() {
 			//Never delete this line!
 			parent::Create();
 
@@ -82,15 +81,13 @@ require_once __DIR__ . '/../libs/COMMON.php';
 
 		}
 
-		public function Destroy()
-		{
+		public function Destroy() {
 			IPS_LogMessage("[" . __CLASS__ . "] - " . __FUNCTION__, sprintf("Destroy Modul '%s' ...", $this->InstanceID));
 			$this->SetUpdateInterval(0);		//Stop Auto-Update Timer
 			parent::Destroy();					//Never delete this line!
 		}
 
-		public function ApplyChanges()
-		{
+		public function ApplyChanges() {
 			parent::ApplyChanges();				//Never delete this line!
 
 			$this->logLevel = $this->ReadPropertyInteger("LogLevel");
@@ -128,7 +125,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 		}
 
 		
-		   public function SetUpdateInterval(int $timerInterval) {
+		public function SetUpdateInterval(int $timerInterval) {
 			if ($timerInterval == 0) {  
 				if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, "Auto-Update stopped [TimerIntervall = 0]", 0); }	
 			}else if ($timerInterval < 60) { 
@@ -139,7 +136,6 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			}
 			$this->SetTimerInterval("Timer_AutoUpdate", $timerInterval*1000);	
 		}
-
 
 
 		public function Timer_AutoUpdate() {
@@ -174,84 +170,42 @@ require_once __DIR__ . '/../libs/COMMON.php';
 
 						//$a = 0;	$b = 0;	$c = $a / $b;  //Test Try-Catch
   						//throw new Exception('! Throw TEST Exception !');
-	
-						if (($api_accessToken = $this->GetApiAccessToken()) === false) {
 
-							if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, "Not valid Api Access Token!", 0); }   
-							return false;
-			
+						$apiUrl = self::API_URL_Bulk;
+						$apiUrl = str_replace("%%vehicleId%%", $this->vehicleId, $apiUrl);
+						$api_accessToken = $this->GetApiAccessToken();
+		
+						if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_REQUEST: %s", $apiUrl),0); }
+
+						$options = array(
+							'http' => array(
+							'method'  => 'GET',
+							'header'=>  "Authorization: Bearer ". $api_accessToken . "\r\n" .
+										"Content-Type: application/json\r\n" .
+										"Accept: application/json\r\n"
+							)
+						);
+
+						$data = $this->RequestHttpData($apiUrl, $options);
+						$jsonData = json_decode($data);
+						
+						if(isset($jsonData->odometer)) { 
+							SetValue($this->GetIDForIdent("odometer"), $jsonData->odometer);
 						} else {
+							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'odometer' not found in JSON data", 0); }
+						}
 
-							$apiUrl = self::API_URL_Bulk;
-							$apiUrl = str_replace("%%vehicleId%%", $this->vehicleId, $apiUrl);
-			
-							if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_REQUEST: %s", $apiUrl),0); }
-	
-							$options = array(
-								'http' => array(
-								'method'  => 'GET',
-								'header'=>  "Authorization: Bearer ". $api_accessToken . "\r\n" .
-											"Content-Type: application/json\r\n" .
-											"Accept: application/json\r\n"
-								)
-							);
+						if(isset($jsonData->level)) { 
 
+							$level = $jsonData->level;
+							SetValue($this->GetIDForIdent("level"), $level);
 
-							if (($data = $this->RequestHttpData($apiUrl, $options )) === false) {
-
-								if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, "Error Update Bulk Data!", 0); }   
-								SetValue($this->GetIDForIdent("api_accessToken"), "");
-								SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);								
-								return false;
-				
-							} else {
-
-								$jsonData = json_decode($data);
-								$odometer = $jsonData->odometer;
+							if(isset($jsonData->range)) { 
 								$range = $jsonData->range;
-								$level = $jsonData->level;
-								$charging = $jsonData->charging;
-								$chargeRemainingTime = $jsonData->chargeRemainingTime;
-								$latitude = $jsonData->latitude;
-								$longitude = $jsonData->longitude;
-								$timestamp = $jsonData->timestamp;
-							
-								SetValue($this->GetIDForIdent("level"), $level);
 								SetValue($this->GetIDForIdent("range"), $range);
-								SetValue($this->GetIDForIdent("chargingStatusTxt"), $charging);
-							
-								$chargingStatus = -99;
-								switch($charging) {
-									case "Disconnected";
-										$chargingStatus = 0;
-										break;
-									case "NoPower";
-										$chargingStatus = 1;
-										break;		
-									case "Starting";
-										$chargingStatus = 2;
-										break;										
-									case "Charging";
-										$chargingStatus = 3;
-										break;										
-									case "Complete";
-										$chargingStatus = 4;
-										break;										
-									case "Stopped";
-										$chargingStatus = 5;
-										break;										
-									case "Error";
-										$chargingStatus = 10;
-										break;										
-									default:
-										$chargingStatus = 11;
-									break;
-								}
-								SetValue($this->GetIDForIdent("chargingStatus"), $chargingStatus);
-								SetValue($this->GetIDForIdent("timestamp"), round($timestamp/1000));
-							
-								$calcBattEnergyLeftTEMP = GetValue($this->GetIDForIdent("calcBattEnergyLeft"));
-							
+
+								///
+								// CALC Custom Values
 								$calcBattEnergyLeft = 58/100 * $level;
 								SetValue($this->GetIDForIdent("calcBattEnergyLeft"), round($calcBattEnergyLeft,1));
 							
@@ -264,6 +218,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 								$calcPercentOfWLTP = 100 / 424 * $calcEstimatedRangeOnFullCharge;
 								SetValue($this->GetIDForIdent("calcPercentOfWLTP"), round($calcPercentOfWLTP,1));
 							
+								$calcBattEnergyLeftTEMP = GetValue($this->GetIDForIdent("calcBattEnergyLeft"));
 								$calcBattEnergyDiff = $calcBattEnergyLeft - $calcBattEnergyLeftTEMP;
 								if($calcBattEnergyDiff > 0) {
 									$calcBattChargedTemp = GetValue($this->GetIDForIdent("calcBattCharged"));
@@ -272,21 +227,87 @@ require_once __DIR__ . '/../libs/COMMON.php';
 									$calcBattDisChargedTemp = GetValue($this->GetIDForIdent("calcBattDisCharged"));
 									SetValue($this->GetIDForIdent("calcBattDisCharged"), round($calcBattDisChargedTemp + abs($calcBattEnergyDiff),1));	
 								}
-							
-							
-								SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
-								if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE",0); }
 
+							} else {
+								if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'range' not found in JSON data", 0); }
 							}
 
-						}
+						} else {
+							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'level' not found in JSON data", 0); }
+						}	
 
+
+						if(isset($jsonData->charging)) { 
+							$charging = $jsonData->charging;
+							SetValue($this->GetIDForIdent("chargingStatusTxt"), $charging);
+					
+							$chargingStatus = -99;
+							switch($charging) {
+								case "Disconnected";
+									$chargingStatus = 0;
+									break;
+								case "NoPower";
+									$chargingStatus = 1;
+									break;		
+								case "Starting";
+									$chargingStatus = 2;
+									break;										
+								case "Charging";
+									$chargingStatus = 3;
+									break;										
+								case "Complete";
+									$chargingStatus = 4;
+									break;										
+								case "Stopped";
+									$chargingStatus = 5;
+									break;										
+								case "Error";
+									$chargingStatus = 10;
+									break;										
+								default:
+									$chargingStatus = 11;
+								break;
+							}
+							SetValue($this->GetIDForIdent("chargingStatus"), $chargingStatus);
+						} else {
+							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'charging' not found in JSON data", 0); }
+						}	
+
+						if(isset($jsonData->chargeRemainingTime)) { 
+							SetValue($this->GetIDForIdent("chargeRemainingTime"), $jsonData->chargeRemainingTime);
+						} else {
+							if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'chargeRemainingTime' not found in JSON data", 0); }
+						}	
+
+						if(isset($jsonData->latitude)) { 
+							SetValue($this->GetIDForIdent("latitude"), $jsonData->latitude);
+						} else {
+							if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'latitude' not found in JSON data", 0); }
+						}	
+
+						if(isset($jsonData->longitude)) { 
+							SetValue($this->GetIDForIdent("longitude"), $jsonData->longitude);
+						} else {
+							if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'longitude' not found in JSON data", 0); }
+						}	
+
+						if(isset($jsonData->timestamp)) { 
+							SetValue($this->GetIDForIdent("timestamp"), round($jsonData->timestamp/1000));
+						} else {
+							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'timestamp' not found in JSON data", 0); }
+						}	
+
+					
+						SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
+						if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE",0); }
 
 					} catch (Exception $e) {
 						$errorMsg = $e->getMessage();
+						//$errorMsg = print_r($e, true);
 						SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
 						SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
-						if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("Exception occurred: %s", $errorMsg),0); }
+						if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("Exception occurred :: %s", $errorMsg),0); }
+						IPS_LogMessage(__METHOD__, $errorMsg);
 					}
 
 					$duration = $this->CalcDuration_ms($start_Time);
@@ -300,7 +321,6 @@ require_once __DIR__ . '/../libs/COMMON.php';
 		}
 
 
-
 		public function GetApiAccessToken() {
 
 			$api_accessToken = GetValue($this->GetIDForIdent("api_accessToken"));
@@ -312,53 +332,80 @@ require_once __DIR__ . '/../libs/COMMON.php';
 				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updade API 'accessToken' [empty '%s']", $api_accessToken), 0); }   
 				$api_accessToken = $this->UpdateApiAccessToken();
 			} else if($now >= $api_accessToken_expires) {
-				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updade API 'accessToken' [expires @%s]", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updade API 'accessToken' [expires @%s]", date('d.m.Y H:i:s', $api_accessToken_expires)), 0); }   
 				$api_accessToken = $this->UpdateApiAccessToken();
 			} else {
-				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("API 'accessToken' expires @%s", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("API 'accessToken' should be valid > expires @%s", date('d.m.Y H:i:s', $api_accessToken_expires)), 0); }   
 			}
 
 			return $api_accessToken;
 		}
 
-
 		public function UpdateApiAccessToken() {
 
-			$apiUrl = self::API_URL_Authentication;
-			$data = ["client_id" => $this->apiClientId, "client_secret" => $this->apiClientSecret, "grant_type" => $this->apiGrantType];
-			$options = array(
-				'http' => array(
-				  'method'  => 'POST',
-				  'content' => json_encode( $data ),
-				  'header'=>  "Content-Type: application/json\r\n" .
-							  "Accept: application/json\r\n"
-				  )
-			  );
-			  
+			try {
 
-			  if (($result = $this->RequestHttpData($apiUrl, $options )) === false) {
+				$api_access_token = false;
+				$api_accessToken_expires = false;
 
-				if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, "Error updating Api Access Token!", 0); }   
-				SetValue($this->GetIDForIdent("api_accessToken"), "");
-				SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);
-				return false;
+				$apiUrl = self::API_URL_Authentication;
+				$data = ["client_id" => $this->apiClientId, "client_secret" => $this->apiClientSecret, "grant_type" => $this->apiGrantType];
+				$options = array(
+					'http' => array(
+					  'method'  => 'POST',
+					  'content' => json_encode( $data ),
+					  'header'=>  "Content-Type: application/json\r\n" .
+								  "Accept: application/json\r\n"
+					  )
+				  	);
 
-			  } else {
-
+				$result = $this->RequestHttpData($apiUrl, $options);	  
 				$response = json_decode( $result );
-			  	//$response->id;
+				//$response->id;
 				//$response->token_type;
-				$api_access_token =  $response->access_token;
-				$api_accessToken_expires = time() + $response->expires_in;
-  
-				SetValue($this->GetIDForIdent("api_accessToken"), $api_access_token);
-				SetValue($this->GetIDForIdent("api_accessToken_expires"), $api_accessToken_expires);
-  
+
+				if(isset($response->access_token)) { 
+					$api_access_token =  $response->access_token;
+					SetValue($this->GetIDForIdent("api_accessToken"), $api_access_token);
+				} else {
+					$errorMsg = sprintf("Property 'access_token' not found in JSON Response Data \n on Line: %s | Function: %s | File: %s",  __LINE__, __FUNCTION__, __FILE__);
+					throw new Exception($errorMsg, 40);
+				}
+
+				if(isset($response->expires_in)) { 
+					$api_accessToken_expires = time() + $response->expires_in;
+					SetValue($this->GetIDForIdent("api_accessToken_expires"), $api_accessToken_expires);					
+				} else {
+					$errorMsg = sprintf("Property 'expires_in' not found in JSON Response Data \n on Line: %s | Function: %s | File: %s",  __LINE__, __FUNCTION__, __FILE__);
+					throw new Exception($errorMsg, 41);
+				}
+				
 				if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, sprintf("NEW API api_accessToken expires @%s", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
-  
+	
 				return $api_access_token;
 
-			  }
+			} catch (Exception $e) {
+				//$errorMsg = $e->getMessage();
+				//$errorMsg = print_r($e, true);
+
+				SetValue($this->GetIDForIdent("api_accessToken"), "");
+				SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);
+
+				$errorMsg = sprintf("ERROR - Update TRONITY API AccessToken > %s \n on Line: %s | Function: %s | File: %s",  $e->getMessage(), __LINE__, __FUNCTION__, __FILE__);
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+				throw new Exception($errorMsg, 10, $e);
+
+			}
+
+		}
+
+		public function GetJsonProperty($json, $propertyName) {
+
+			if(property_exists($json, $propertyName)) {
+				return $json->{$propertyName};
+			} else {
+				return null;
+			}
 
 		}
 
@@ -371,16 +418,15 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			if (($data = @file_get_contents( $url, false, $context )) === false) {
 
 				if(isset($http_response_header)) {
-					$errorMsg = print_r($http_response_header, true);
-					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
-					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
-					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("ERROR on HTTP Request occurred: %s", $errorMsg),0); }
+					$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $http_response_header[0], __LINE__, __FUNCTION__, __FILE__);
+					if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+					throw new Exception($errorMsg, 10);
 				} else {
 					$error = error_get_last();
 					$errorMsg = print_r($error, true);
-					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
-					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
-					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("ERROR on HTTP Request occurred: %s", $errorMsg),0); }
+					$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $errorMsg, __LINE__, __FUNCTION__, __FILE__);
+					if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+					throw new Exception($errorMsg, 11);
 				}
 
 			} else {
@@ -397,17 +443,20 @@ require_once __DIR__ . '/../libs/COMMON.php';
 					$result = $data;
 
 				} else 	if (strpos($http_response_header[0], "401")) { 
-					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
-					$errorMsg = sprintf("HTTP_RESPONSE_HEADER Error '400': %s", print_r($http_response_header, true));
-					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
-					if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, $errorMsg, 0); }
+
 					SetValue($this->GetIDForIdent("api_accessToken"), "");
 					SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);		
+
+					$errorMsg = sprintf("HTTP_RESPONSE_HEADER '400': %s", print_r($http_response_header, true));
+					$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $errorMsg, __LINE__, __FUNCTION__, __FILE__);
+					if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+					throw new Exception($errorMsg, 20);
+
 				} else {
 					$errorMsg = print_r($http_response_header, true);
-					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
-					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
-					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("ERROR on HTTP Request occurred: %s", $errorMsg),0); }					
+					$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $http_response_header[0], __LINE__, __FUNCTION__, __FILE__);
+					if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+					throw new Exception($errorMsg, 21);				
 				}
 
 			}

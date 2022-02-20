@@ -174,48 +174,38 @@ require_once __DIR__ . '/../libs/COMMON.php';
 
 						//$a = 0;	$b = 0;	$c = $a / $b;  //Test Try-Catch
   						//throw new Exception('! Throw TEST Exception !');
+	
+						if (($api_accessToken = $this->GetApiAccessToken()) === false) {
 
-						$api_accessToken = GetValue($this->GetIDForIdent("api_accessToken"));
-						$api_accessToken_expires = GetValueInteger($this->GetIDForIdent("api_accessToken_expires"));
-						$api_accessToken_expires = $api_accessToken_expires - 15;
-
-						$now = time();
-						if($api_accessToken == "") {
-							if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updae API 'accessToken' [empty '%s']", $api_accessToken), 0); }   
-							$this->UpdateApiAccessToken();
-						} else if($now >= $api_accessToken_expires) {
-							if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updae API 'accessToken' [expires @%s]", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
-							$this->UpdateApiAccessToken();
+							if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, "Not valid Api Access Token!", 0); }   
+							return false;
+			
 						} else {
-							if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("API 'accessToken' expires @%s", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
-						}
-		
-						$apiUrl = self::API_URL_Bulk;
-						$apiUrl = str_replace("%%vehicleId%%", $this->vehicleId, $apiUrl);
-		
-						if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_REQUEST: %s", $apiUrl),0); }
 
-						$options = array(
-							'http' => array(
-							'method'  => 'GET',
-							'header'=>  "Authorization: Bearer ". $api_accessToken . "\r\n" .
-										"Content-Type: application/json\r\n" .
-										"Accept: application/json\r\n"
-							)
-						);
-						
-						$context  = stream_context_create( $options );
-						$data = file_get_contents( $apiUrl, false, $context );
+							$apiUrl = self::API_URL_Bulk;
+							$apiUrl = str_replace("%%vehicleId%%", $this->vehicleId, $apiUrl);
+			
+							if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_REQUEST: %s", $apiUrl),0); }
+	
+							$options = array(
+								'http' => array(
+								'method'  => 'GET',
+								'header'=>  "Authorization: Bearer ". $api_accessToken . "\r\n" .
+											"Content-Type: application/json\r\n" .
+											"Accept: application/json\r\n"
+								)
+							);
 
-						//if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_HEADER: %s", print_r($http_response_header, true)),0); }
-						if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_HEADER: %s", print_r($http_response_header[0], true)),0); }
-						if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_DATA: %s", print_r($data, true)),0); }
 
-						if (strpos($http_response_header[0], "200")) { 
+							if (($data = $this->RequestHttpData($apiUrl, $options )) === false) {
 
-							if ($data === FALSE) {
-								if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("NO HTTP_RESPONSE_DATA: %s", print_r($data, true)),0); }
+								if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, "Error Update Bulk Data!", 0); }   
+								SetValue($this->GetIDForIdent("api_accessToken"), "");
+								SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);								
+								return false;
+				
 							} else {
+
 								$jsonData = json_decode($data);
 								$odometer = $jsonData->odometer;
 								$range = $jsonData->range;
@@ -225,11 +215,11 @@ require_once __DIR__ . '/../libs/COMMON.php';
 								$latitude = $jsonData->latitude;
 								$longitude = $jsonData->longitude;
 								$timestamp = $jsonData->timestamp;
-		
+							
 								SetValue($this->GetIDForIdent("level"), $level);
 								SetValue($this->GetIDForIdent("range"), $range);
 								SetValue($this->GetIDForIdent("chargingStatusTxt"), $charging);
-								
+							
 								$chargingStatus = -99;
 								switch($charging) {
 									case "Disconnected";
@@ -258,24 +248,22 @@ require_once __DIR__ . '/../libs/COMMON.php';
 									break;
 								}
 								SetValue($this->GetIDForIdent("chargingStatus"), $chargingStatus);
-
 								SetValue($this->GetIDForIdent("timestamp"), round($timestamp/1000));
-
-
+							
 								$calcBattEnergyLeftTEMP = GetValue($this->GetIDForIdent("calcBattEnergyLeft"));
-
+							
 								$calcBattEnergyLeft = 58/100 * $level;
 								SetValue($this->GetIDForIdent("calcBattEnergyLeft"), round($calcBattEnergyLeft,1));
-
+							
 								$calcConsumption = $calcBattEnergyLeft / $range * 100;
 								SetValue($this->GetIDForIdent("calcConsumption"), round($calcConsumption,1));
-
+							
 								$calcEstimatedRangeOnFullCharge = $range / $level * 100;
 								SetValue($this->GetIDForIdent("calcEstimatedRangeOnFullCharge"), round($calcEstimatedRangeOnFullCharge));
-
+							
 								$calcPercentOfWLTP = 100 / 424 * $calcEstimatedRangeOnFullCharge;
 								SetValue($this->GetIDForIdent("calcPercentOfWLTP"), round($calcPercentOfWLTP,1));
-
+							
 								$calcBattEnergyDiff = $calcBattEnergyLeft - $calcBattEnergyLeftTEMP;
 								if($calcBattEnergyDiff > 0) {
 									$calcBattChargedTemp = GetValue($this->GetIDForIdent("calcBattCharged"));
@@ -284,26 +272,16 @@ require_once __DIR__ . '/../libs/COMMON.php';
 									$calcBattDisChargedTemp = GetValue($this->GetIDForIdent("calcBattDisCharged"));
 									SetValue($this->GetIDForIdent("calcBattDisCharged"), round($calcBattDisChargedTemp + abs($calcBattEnergyDiff),1));	
 								}
-
-
+							
+							
 								SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
 								if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE",0); }
+
 							}
 
-						} else 	if (strpos($http_response_header[0], "401")) { 
-							SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
-							$errorMsg = sprintf("HTTP_RESPONSE_HEADER Error '400': %s", print_r($http_response_header, true));
-							SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
-							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, $errorMsg, 0); }
-							SetValue($this->GetIDForIdent("api_accessToken"), "");
-							SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);
-
-						} else {
-							SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
-							$errorMsg = sprintf("HTTP_RESPONSE_HEADER != 200: %s", print_r($http_response_header, true));
-							SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
-							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, $errorMsg, 0); }
 						}
+
+
 					} catch (Exception $e) {
 						$errorMsg = $e->getMessage();
 						SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
@@ -321,6 +299,29 @@ require_once __DIR__ . '/../libs/COMMON.php';
 				
 		}
 
+
+
+		public function GetApiAccessToken() {
+
+			$api_accessToken = GetValue($this->GetIDForIdent("api_accessToken"));
+			$api_accessToken_expires = GetValueInteger($this->GetIDForIdent("api_accessToken_expires"));
+			$api_accessToken_expires = $api_accessToken_expires - 15;
+
+			$now = time();
+			if($api_accessToken == "") {
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updade API 'accessToken' [empty '%s']", $api_accessToken), 0); }   
+				$api_accessToken = $this->UpdateApiAccessToken();
+			} else if($now >= $api_accessToken_expires) {
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updade API 'accessToken' [expires @%s]", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
+				$api_accessToken = $this->UpdateApiAccessToken();
+			} else {
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("API 'accessToken' expires @%s", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
+			}
+
+			return $api_accessToken;
+		}
+
+
 		public function UpdateApiAccessToken() {
 
 			$apiUrl = self::API_URL_Authentication;
@@ -334,21 +335,86 @@ require_once __DIR__ . '/../libs/COMMON.php';
 				  )
 			  );
 			  
-			  $context  = stream_context_create( $options );
-			  $result = file_get_contents( $apiUrl, false, $context );
-			  $response = json_decode( $result );
-			  
-			  //$response->id;
-			  //$response->token_type;
-			  $api_access_token =  $response->access_token;
-			  $api_accessToken_expires = time() + $response->expires_in;
 
-			  SetValue($this->GetIDForIdent("api_accessToken"), $api_access_token);
-			  SetValue($this->GetIDForIdent("api_accessToken_expires"), $api_accessToken_expires);
+			  if (($result = $this->RequestHttpData($apiUrl, $options )) === false) {
 
-			  if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, sprintf("NEW API api_accessToken expires @%s", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
+				if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, "Error updating Api Access Token!", 0); }   
+				SetValue($this->GetIDForIdent("api_accessToken"), "");
+				SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);
+				return false;
+
+			  } else {
+
+				$response = json_decode( $result );
+			  	//$response->id;
+				//$response->token_type;
+				$api_access_token =  $response->access_token;
+				$api_accessToken_expires = time() + $response->expires_in;
+  
+				SetValue($this->GetIDForIdent("api_accessToken"), $api_access_token);
+				SetValue($this->GetIDForIdent("api_accessToken_expires"), $api_accessToken_expires);
+  
+				if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, sprintf("NEW API api_accessToken expires @%s", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
+  
+				return $api_access_token;
+
+			  }
 
 		}
+
+
+		public function RequestHttpData($url, $options) {
+
+			$result = false;
+
+			$context  = stream_context_create( $options );
+			if (($data = @file_get_contents( $url, false, $context )) === false) {
+
+				if(isset($http_response_header)) {
+					$errorMsg = print_r($http_response_header, true);
+					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
+					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
+					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("ERROR on HTTP Request occurred: %s", $errorMsg),0); }
+				} else {
+					$error = error_get_last();
+					$errorMsg = print_r($error, true);
+					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
+					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
+					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("ERROR on HTTP Request occurred: %s", $errorMsg),0); }
+				}
+
+			} else {
+
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_HEADER: %s", print_r($http_response_header[0], true)),0); }
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_DATA: %s", print_r($data, true)),0); }					
+
+				if (strpos($http_response_header[0], "200")) {
+
+					$result = $data;
+
+				} else 	if (strpos($http_response_header[0], "201")) { 
+
+					$result = $data;
+
+				} else 	if (strpos($http_response_header[0], "401")) { 
+					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
+					$errorMsg = sprintf("HTTP_RESPONSE_HEADER Error '400': %s", print_r($http_response_header, true));
+					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
+					if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, $errorMsg, 0); }
+					SetValue($this->GetIDForIdent("api_accessToken"), "");
+					SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);		
+				} else {
+					$errorMsg = print_r($http_response_header, true);
+					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
+					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
+					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("ERROR on HTTP Request occurred: %s", $errorMsg),0); }					
+				}
+
+			}
+
+			return $result;
+		}
+
 
 
 		public function ResetUpdateVariables(string $Text) {

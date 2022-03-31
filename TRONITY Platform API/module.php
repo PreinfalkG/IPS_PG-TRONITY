@@ -1,4 +1,4 @@
-<?php
+<?phpTRONITY.km
 declare(strict_types=1);
 
 require_once __DIR__ . '/../libs/COMMON.php'; 
@@ -553,7 +553,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			$varId = $this->RegisterVariableInteger("chargeRemainingTime", "Charge Remaining Time", "", 160);
 			IPS_SetHidden($varId, true);
 
-			$varId = $this->RegisterVariableInteger("odometer", "Odometer", "TRONITY.km", 200);
+			$varId = $this->RegisterVariableInteger("odometer", "Odometer", "EV.km", 200);
 			IPS_SetHidden($varId, true);
 
 			$varId = $this->RegisterVariableFloat("latitude", "Latitude", "", 210);

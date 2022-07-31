@@ -180,6 +180,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 						$options = array(
 							'http' => array(
 							'method'  => 'GET',
+							'timeout' => 10,
 							'header'=>  "Authorization: Bearer ". $api_accessToken . "\r\n" .
 										"Content-Type: application/json\r\n" .
 										"Accept: application/json\r\n"
@@ -418,8 +419,14 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			if (($data = @file_get_contents( $url, false, $context )) === false) {
 
 				if(isset($http_response_header)) {
-					$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $http_response_header[0], __LINE__, __FUNCTION__, __FILE__);
+					$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, print_r($http_response_header, true), __LINE__, __FUNCTION__, __FILE__);
 					if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+
+					$error = error_get_last();
+					$errorMsg = print_r($error, true);
+					$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $errorMsg, __LINE__, __FUNCTION__, __FILE__);
+					if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }					
+					
 					throw new Exception($errorMsg, 10);
 				} else {
 					$error = error_get_last();
@@ -431,7 +438,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 
 			} else {
 
-				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_HEADER: %s", print_r($http_response_header[0], true)),0); }
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_HEADER: %s", print_r($http_response_header, true)),0); }
 				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_DATA: %s", print_r($data, true)),0); }					
 
 				if (strpos($http_response_header[0], "200")) {

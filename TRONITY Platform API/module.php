@@ -14,7 +14,6 @@ require_once __DIR__ . '/../libs/COMMON.php';
 		private $logLevel = 3;
 		private $enableIPSLogOutput = false;
 		private $parentRootId;
-		private $archivInstanzID;
 
 		private $apiClientId;
 		private $apiClientSecret;
@@ -29,7 +28,6 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			if(IPS_InstanceExists($InstanceID)) {
 
 				$this->parentRootId = IPS_GetParent($InstanceID);
-				$this->archivInstanzID = IPS_GetInstanceListByModuleID("{43192F0B-135B-4CE7-A0A7-1475603F3060}")[0];
 
 				$currentStatus = $this->GetStatus();
 				if($currentStatus == 102) {				//Instanz ist aktiv
@@ -67,7 +65,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			$this->RegisterPropertyString("tbGrantType", "app");
 			$this->RegisterPropertyString("tbVehicleId", "");
 
-			$this->RegisterTimer('Timer_AutoUpdate', 0, 'TPA_Timer_AutoUpdate($_IPS["TARGET"]);');
+			$this->RegisterTimer('TimerAutoUpdate_TRONITY', 0, 'TPA_TimerAutoUpdate_TRONITY($_IPS["TARGET"]);');
 
 
 			$runlevel = IPS_GetKernelRunlevel();
@@ -134,13 +132,13 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			} else {
 				if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, sprintf("Set Auto-Update Timer Intervall to %s sec", $timerInterval), 0); }
 			}
-			$this->SetTimerInterval("Timer_AutoUpdate", $timerInterval*1000);	
+			$this->SetTimerInterval("TimerAutoUpdate_TRONITY", $timerInterval*1000);	
 		}
 
 
-		public function Timer_AutoUpdate() {
+		public function TimerAutoUpdate_TRONITY() {
 
-			if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Timer_AutoUpdate called ...", 0); }
+			if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "TimerAutoUpdate_TRONITY called ...", 0); }
 
 			$skipUdateSec = 600;
 			$lastUpdate  = time() - round(IPS_GetVariable($this->GetIDForIdent("updateCntError"))["VariableUpdated"]);
@@ -544,11 +542,13 @@ require_once __DIR__ . '/../libs/COMMON.php';
 
 		protected function RegisterVariables() {
 			
+			$archivInstanzID = IPS_GetInstanceListByModuleID("{43192F0B-135B-4CE7-A0A7-1475603F3060}")[0];
+
 			$varId = $this->RegisterVariableInteger("level", "Batterie Ladezustand", "EV.level", 100);
-			//AC_SetLoggingStatus($this->archivInstanzID, $varId, true);
+			//AC_SetLoggingStatus($archivInstanzID, $varId, true);
 
 			$varId = $this->RegisterVariableInteger("range", "Geschätzte Reichweite", "EV.km", 110);
-			//AC_SetLoggingStatus($this->archivInstanzID, $varId, true);			
+			//AC_SetLoggingStatus($archivInstanzID, $varId, true);			
 
 
 			$varId = $this->RegisterVariableInteger("chargingStatus", "Charging Status", "EV.ChargingStatus", 150);
@@ -603,7 +603,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 			$varId = $this->RegisterVariableInteger("api_accessToken_expires", "API access_token expires", "~UnixTimestamp", 950);
 			IPS_SetHidden($varId, true);
 
-			IPS_ApplyChanges($this->archivInstanzID);
+			IPS_ApplyChanges($archivInstanzID);
 			if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, "Variables registered", 0); }
 
 		}

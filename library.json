@@ -4,9 +4,9 @@
     "author": "Preinfalk Günter",
     "url": "https://www.tronity.io/",
     "compatibility": {
-        "version": "5.5"
+        "version": "6.4"
     },
-    "version": "0.1",
-    "build": 9,
-    "date": 1645340400
+    "version": "0.2",
+    "build": 20231028,
+    "date": 1698478399
 }

@@ -113,8 +113,9 @@ require_once __DIR__ . '/../libs/COMMON.php';
 		public function MessageSink($TimeStamp, $SenderID, $Message, $Data)	{
 
 			$logMsg = sprintf("TimeStamp: %s | SenderID: %s | Message: %s | Data: %s", $TimeStamp, $SenderID, $Message, print_r($Data,true));
-			IPS_LogMessage("[" . __CLASS__ . "] - " . __FUNCTION__, $logMsg);
+			//IPS_LogMessage("[" . __CLASS__ . "] - " . __FUNCTION__, $logMsg);
 			if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, $logMsg, 0); }
+
 
 			parent::MessageSink($TimeStamp, $SenderID, $Message, $Data);
 			//if ($Message == IPS_KERNELMESSAGE && $Data[0] == KR_READY) 	{

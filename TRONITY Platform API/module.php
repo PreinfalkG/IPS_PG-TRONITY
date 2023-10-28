@@ -398,7 +398,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 
 		}
 
-		public function GetJsonProperty($json, $propertyName) {
+		public function GetJsonProperty(string $json, string $propertyName) {
 
 			if(property_exists($json, $propertyName)) {
 				return $json->{$propertyName};
@@ -409,7 +409,7 @@ require_once __DIR__ . '/../libs/COMMON.php';
 		}
 
 
-		public function RequestHttpData($url, $options) {
+		public function RequestHttpData(string $url, array $options) {
 
 			$result = false;
 

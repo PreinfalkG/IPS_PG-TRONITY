@@ -1,12 +1,12 @@
 {
     "id": "{AD538763-7FA7-0063-D0B7-3B2127D7EBE6}",
-    "name": "TRONITY",
+    "name": "TRONITY Modul",
     "author": "Preinfalk Günter",
     "url": "https://www.tronity.io/",
     "compatibility": {
         "version": "6.4"
     },
-    "version": "0.3",
-    "build": 20231028,
-    "date": 1698478399
+    "version": "0.31",
+    "build": 20231101,
+    "date": 1698863091
 }

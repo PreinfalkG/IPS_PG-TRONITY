@@ -13,7 +13,6 @@ class TRONITYPlatformAPI extends IPSModule {
 	private $logLevel = 3;
 	private $logCnt = 0;
 	private $enableIPSLogOutput = false;
-	private $parentRootId;
 
 	private $apiClientId;
 	private $apiClientSecret;
@@ -24,19 +23,18 @@ class TRONITYPlatformAPI extends IPSModule {
 	public function __construct($InstanceID) {
 	
 		parent::__construct($InstanceID);		// Diese Zeile nicht löschen
-	
+
 		$currentStatus = @$this->GetStatus();
 		if($currentStatus == 102) {				//Instanz ist aktiv
-			$this->parentRootId = IPS_GetParent($InstanceID);
 			$this->logLevel = $this->ReadPropertyInteger("LogLevel");
 			$this->apiClientId = $this->ReadPropertyString("tbClientId");
 			$this->apiClientSecret = $this->ReadPropertyString("tbClientSecret");		
 			$this->apiGrantType = $this->ReadPropertyString("tbGrantType");		
 			$this->vehicleId = $this->ReadPropertyString("tbVehicleId");	
 
-			if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, sprintf("Log-Level is %d", $this->logLevel), 0); }
+			if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, sprintf("Log-Level is %d", $this->logLevel)); }
 		} else {
-			if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, sprintf("Current Status is '%s'", $currentStatus), 0); }	
+			if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, sprintf("Current Status is '%s'", $currentStatus)); }	
 		}
 	}
 
@@ -46,11 +44,11 @@ class TRONITYPlatformAPI extends IPSModule {
 		parent::Create();				//Never delete this line!
 
 		$logMsg = sprintf("Create Modul '%s [%s]'...", IPS_GetName($this->InstanceID), $this->InstanceID);
-		if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, $logMsg, 0); }
+		if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, $logMsg); }
 		IPS_LogMessage(__CLASS__."_".__FUNCTION__, $logMsg);
 
 		$logMsg = sprintf("KernelRunlevel '%s'", IPS_GetKernelRunlevel());
-		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, $logMsg, 0); }	
+		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, $logMsg); }	
 
 		$this->RegisterPropertyBoolean('AutoUpdate', false);
 		$this->RegisterPropertyInteger("TimerInterval", 240);		
@@ -75,7 +73,7 @@ class TRONITYPlatformAPI extends IPSModule {
 		parent::ApplyChanges();					//Never delete this line!
 
 		$this->logLevel = $this->ReadPropertyInteger("LogLevel");
-		if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, sprintf("Set Log-Level to %d", $this->logLevel), 0); }
+		if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, sprintf("Set Log-Level to %d", $this->logLevel)); }
 		
 		$this->RegisterProfiles();
 		$this->RegisterVariables();  
@@ -91,18 +89,18 @@ class TRONITYPlatformAPI extends IPSModule {
 
 	public function MessageSink($TimeStamp, $SenderID, $Message, $Data)	{
 		$logMsg = sprintf("TimeStamp: %s | SenderID: %s | Message: %s | Data: %s", $TimeStamp, $SenderID, $Message, json_encode($Data));
-		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, $logMsg, 0); }
+		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, $logMsg); }
 		//IPS_LogMessage(__CLASS__."_".__FUNCTION__, $logMsg);
 	}
 	
 	public function SetUpdateInterval(int $timerInterval) {
 		if ($timerInterval == 0) {  
-			if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, "Auto-Update stopped [TimerIntervall = 0]", 0); }	
+			if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, "Auto-Update stopped [TimerIntervall = 0]"); }	
 		}else if ($timerInterval < 60) { 
 			$timerInterval = 60; 
-			if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, sprintf("Set Auto-Update Timer Intervall to %s sec", $timerInterval), 0); }	
+			if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, sprintf("Set Auto-Update Timer Intervall to %s sec", $timerInterval)); }	
 		} else {
-			if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, sprintf("Set Auto-Update Timer Intervall to %s sec", $timerInterval), 0); }
+			if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, sprintf("Set Auto-Update Timer Intervall to %s sec", $timerInterval)); }
 		}
 		$this->SetTimerInterval("TimerAutoUpdate_TRONITY", $timerInterval*1000);	
 	}
@@ -110,7 +108,7 @@ class TRONITYPlatformAPI extends IPSModule {
 
 	public function TimerAutoUpdate_TRONITY() {
 
-		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "TimerAutoUpdate_TRONITY called ...", 0); }
+		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "TimerAutoUpdate_TRONITY called ..."); }
 
 		$skipUdateSec = 600;
 		$lastUpdate  = time() - round(IPS_GetVariable($this->GetIDForIdent("updateCntError"))["VariableUpdated"]);
@@ -121,14 +119,14 @@ class TRONITYPlatformAPI extends IPSModule {
 		} else {
 			SetValue($this->GetIDForIdent("updateCntSkip"), GetValue($this->GetIDForIdent("updateCntSkip")) + 1);
 			$logMsg =  sprintf("INFO :: Skip Update for %d sec for Instance '%s' [%s] >> last error %d seconds ago...", $skipUdateSec, $this->InstanceID, IPS_GetName($this->InstanceID),  $lastUpdate);
-			if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, $logMsg, 0); }
+			if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, $logMsg); }
 		}						
 	}
 
 
 	public function UpdateBulk(string $Text) {
 
-		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update Bulk ...", 0); }
+		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update Bulk ..."); }
 
 			$currentStatus = $this->GetStatus();
 			if($currentStatus == 102) {		
@@ -144,7 +142,7 @@ class TRONITYPlatformAPI extends IPSModule {
 					$apiUrl = str_replace("%%vehicleId%%", $this->vehicleId, $apiUrl);
 					$api_accessToken = $this->GetApiAccessToken();
 	
-					if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_REQUEST: %s", $apiUrl),0); }
+					if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_REQUEST: %s", $apiUrl)); }
 
 					$options = array(
 						'http' => array(
@@ -162,7 +160,7 @@ class TRONITYPlatformAPI extends IPSModule {
 					if(isset($jsonData->odometer)) { 
 						SetValue($this->GetIDForIdent("odometer"), $jsonData->odometer);
 					} else {
-						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'odometer' not found in JSON data", 0); }
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'odometer' not found in JSON data"); }
 					}
 
 					if(isset($jsonData->level)) { 
@@ -199,11 +197,11 @@ class TRONITYPlatformAPI extends IPSModule {
 							}
 
 						} else {
-							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'range' not found in JSON data", 0); }
+							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'range' not found in JSON data"); }
 						}
 
 					} else {
-						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'level' not found in JSON data", 0); }
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'level' not found in JSON data"); }
 					}	
 
 
@@ -240,43 +238,43 @@ class TRONITYPlatformAPI extends IPSModule {
 						}
 						SetValue($this->GetIDForIdent("chargingStatus"), $chargingStatus);
 					} else {
-						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'charging' not found in JSON data", 0); }
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'charging' not found in JSON data"); }
 					}	
 
 					if(isset($jsonData->chargeRemainingTime)) { 
 						SetValue($this->GetIDForIdent("chargeRemainingTime"), $jsonData->chargeRemainingTime);
 					} else {
-						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'chargeRemainingTime' not found in JSON data", 0); }
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'chargeRemainingTime' not found in JSON data"); }
 					}	
 
 					if(isset($jsonData->latitude)) { 
 						SetValue($this->GetIDForIdent("latitude"), $jsonData->latitude);
 					} else {
-						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'latitude' not found in JSON data", 0); }
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'latitude' not found in JSON data"); }
 					}	
 
 					if(isset($jsonData->longitude)) { 
 						SetValue($this->GetIDForIdent("longitude"), $jsonData->longitude);
 					} else {
-						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'longitude' not found in JSON data", 0); }
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'longitude' not found in JSON data"); }
 					}	
 
 					if(isset($jsonData->timestamp)) { 
 						SetValue($this->GetIDForIdent("timestamp"), round($jsonData->timestamp/1000));
 					} else {
-						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'timestamp' not found in JSON data", 0); }
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'timestamp' not found in JSON data"); }
 					}	
 
 				
 					SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
-					if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE",0); }
+					if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE"); }
 
 				} catch (Exception $e) {
 					$errorMsg = $e->getMessage();
 					//$errorMsg = print_r($e, true);
 					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
 					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
-					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("Exception occurred :: %s", $errorMsg),0); }
+					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("Exception occurred :: %s", $errorMsg)); }
 				}
 
 				$duration = $this->CalcDuration_ms($start_Time);
@@ -284,7 +282,7 @@ class TRONITYPlatformAPI extends IPSModule {
 
 			} else {
 				//SetValue($this->GetIDForIdent("instanzInactivCnt"), GetValue($this->GetIDForIdent("instanzInactivCnt")) + 1);
-				if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, sprintf("Instanz '%s - [%s]' not activ [Status=%s]", $this->InstanceID, IPS_GetName($this->InstanceID), $currentStatus), 0); }
+				if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, sprintf("Instanz '%s - [%s]' not activ [Status=%s]", $this->InstanceID, IPS_GetName($this->InstanceID), $currentStatus)); }
 			}
 			
 	}
@@ -298,13 +296,13 @@ class TRONITYPlatformAPI extends IPSModule {
 
 		$now = time();
 		if($api_accessToken == "") {
-			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updade API 'accessToken' [empty '%s']", $api_accessToken), 0); }   
+			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updade API 'accessToken' [empty '%s']", $api_accessToken)); }   
 			$api_accessToken = $this->UpdateApiAccessToken();
 		} else if($now >= $api_accessToken_expires) {
-			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updade API 'accessToken' [expires @%s]", date('d.m.Y H:i:s', $api_accessToken_expires)), 0); }   
+			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("NEED Updade API 'accessToken' [expires @%s]", date('d.m.Y H:i:s', $api_accessToken_expires))); }   
 			$api_accessToken = $this->UpdateApiAccessToken();
 		} else {
-			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("API 'accessToken' should be valid > expires @%s", date('d.m.Y H:i:s', $api_accessToken_expires)), 0); }   
+			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("API 'accessToken' should be valid > expires @%s", date('d.m.Y H:i:s', $api_accessToken_expires))); }   
 		}
 
 		return $api_accessToken;
@@ -349,7 +347,7 @@ class TRONITYPlatformAPI extends IPSModule {
 				throw new Exception($errorMsg, 41);
 			}
 			
-			if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, sprintf("NEW API api_accessToken expires @%s", date('d.m.Y H:i:s',$api_accessToken_expires)), 0); }   
+			if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, sprintf("NEW API api_accessToken expires @%s", date('d.m.Y H:i:s',$api_accessToken_expires))); }   
 
 			return $api_access_token;
 
@@ -361,7 +359,7 @@ class TRONITYPlatformAPI extends IPSModule {
 			SetValue($this->GetIDForIdent("api_accessToken_expires"), 0);
 
 			$errorMsg = sprintf("ERROR - Update TRONITY API AccessToken > %s \n on Line: %s | Function: %s | File: %s",  $e->getMessage(), __LINE__, __FUNCTION__, __FILE__);
-			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg); }
 			throw new Exception($errorMsg, 10, $e);
 
 		}
@@ -388,26 +386,26 @@ class TRONITYPlatformAPI extends IPSModule {
 
 			if(isset($http_response_header)) {
 				$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, print_r($http_response_header, true), __LINE__, __FUNCTION__, __FILE__);
-				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg); }
 
 				$error = error_get_last();
 				$errorMsg = print_r($error, true);
 				$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $errorMsg, __LINE__, __FUNCTION__, __FILE__);
-				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }					
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg); }					
 				
 				throw new Exception($errorMsg, 10);
 			} else {
 				$error = error_get_last();
 				$errorMsg = print_r($error, true);
 				$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $errorMsg, __LINE__, __FUNCTION__, __FILE__);
-				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg); }
 				throw new Exception($errorMsg, 11);
 			}
 
 		} else {
 
-			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_HEADER: %s", print_r($http_response_header, true)),0); }
-			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_DATA: %s", print_r($data, true)),0); }					
+			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_HEADER: %s", print_r($http_response_header, true))); }
+			if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_RESPONSE_DATA: %s", print_r($data, true))); }					
 
 			if (strpos($http_response_header[0], "200")) {
 
@@ -424,13 +422,13 @@ class TRONITYPlatformAPI extends IPSModule {
 
 				$errorMsg = sprintf("HTTP_RESPONSE_HEADER '400': %s", print_r($http_response_header, true));
 				$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $errorMsg, __LINE__, __FUNCTION__, __FILE__);
-				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg); }
 				throw new Exception($errorMsg, 20);
 
 			} else {
 				$errorMsg = print_r($http_response_header, true);
 				$errorMsg = sprintf("ERROR - Request TRONITY API '%s' > %s \n on Line: %s | Function: %s | File: %s", $url, $http_response_header[0], __LINE__, __FUNCTION__, __FILE__);
-				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg,0); }
+				if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, $errorMsg); }
 				throw new Exception($errorMsg, 21);				
 			}
 
@@ -507,7 +505,7 @@ class TRONITYPlatformAPI extends IPSModule {
 			//IPS_SetVariableProfileValues('EV.Percent', 0, 0, 0);
 		} 	
 
-		if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, "Profiles registered", 0); }
+		if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, "Profiles registered"); }
 	}
 
 	protected function RegisterVariables() {
@@ -574,24 +572,24 @@ class TRONITYPlatformAPI extends IPSModule {
 		IPS_SetHidden($varId, true);
 
 		IPS_ApplyChanges($archivInstanzID);
-		if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, "Variables registered", 0); }
+		if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, "Variables registered"); }
 
 	}
 
-	protected function AddLog($name, $daten, $format) {
+
+	protected function AddLog($name, $daten, $format=0) {
 		$this->logCnt++;
+		$logSender = "[".__CLASS__."] - " . $name;
 		if($this->logLevel >= LogLevel::DEBUG) {
-			$logsender = sprintf("%02d-T%2d [%s] - %s", $this->logCnt, $_IPS['THREAD'], __CLASS__, $name);
-			$this->SendDebug($logsender, $daten, $format); 	
-		} else {
-			$this->SendDebug("[".__CLASS__."] - " . $name, $daten, $format); 	
-		}
+			$logSender = sprintf("%02d-T%2d [%s] - %s", $this->logCnt, $_IPS['THREAD'], __CLASS__, $name);
+		} 
+		$this->SendDebug($logSender, $daten, $format); 	
 	
 		if($this->enableIPSLogOutput) {
 			if($format == 0) {
-				IPS_LogMessage("[".__CLASS__."] - " . $name, $daten);	
+				IPS_LogMessage($logSender, $daten);	
 			} else {
-				IPS_LogMessage("[".__CLASS__."] - " . $name, $this->String2Hex($daten));			
+				IPS_LogMessage($logSender, $this->String2Hex($daten));			
 			}
 		}
 	}

@@ -174,26 +174,28 @@ class TRONITYPlatformAPI extends IPSModule {
 
 							///
 							// CALC Custom Values
-							$calcBattEnergyLeft = 58/100 * $level;
-							SetValue($this->GetIDForIdent("calcBattEnergyLeft"), round($calcBattEnergyLeft,1));
-						
-							$calcConsumption = $calcBattEnergyLeft / $range * 100;
-							SetValue($this->GetIDForIdent("calcConsumption"), round($calcConsumption,1));
-						
-							$calcEstimatedRangeOnFullCharge = $range / $level * 100;
-							SetValue($this->GetIDForIdent("calcEstimatedRangeOnFullCharge"), round($calcEstimatedRangeOnFullCharge));
-						
-							$calcPercentOfWLTP = 100 / 424 * $calcEstimatedRangeOnFullCharge;
-							SetValue($this->GetIDForIdent("calcPercentOfWLTP"), round($calcPercentOfWLTP,1));
-						
-							$calcBattEnergyLeftTEMP = GetValue($this->GetIDForIdent("calcBattEnergyLeft"));
-							$calcBattEnergyDiff = $calcBattEnergyLeft - $calcBattEnergyLeftTEMP;
-							if($calcBattEnergyDiff > 0) {
-								$calcBattChargedTemp = GetValue($this->GetIDForIdent("calcBattCharged"));
-								SetValue($this->GetIDForIdent("calcBattCharged"), round($calcBattChargedTemp + abs($calcBattEnergyDiff),1));
-							} if($calcBattEnergyDiff < 0) {
-								$calcBattDisChargedTemp = GetValue($this->GetIDForIdent("calcBattDisCharged"));
-								SetValue($this->GetIDForIdent("calcBattDisCharged"), round($calcBattDisChargedTemp + abs($calcBattEnergyDiff),1));	
+							if(true) {
+								$calcBattEnergyLeft = 58/100 * $level;
+								SetValue($this->GetIDForIdent("calcBattEnergyLeft"), round($calcBattEnergyLeft,1));
+							
+								$calcConsumption = $calcBattEnergyLeft / $range * 100;
+								SetValue($this->GetIDForIdent("calcConsumption"), round($calcConsumption,1));
+							
+								$calcEstimatedRangeOnFullCharge = $range / $level * 100;
+								SetValue($this->GetIDForIdent("calcEstimatedRangeOnFullCharge"), round($calcEstimatedRangeOnFullCharge));
+							
+								$calcPercentOfWLTP = 100 / 424 * $calcEstimatedRangeOnFullCharge;
+								SetValue($this->GetIDForIdent("calcPercentOfWLTP"), round($calcPercentOfWLTP,1));
+							
+								$calcBattEnergyLeftTEMP = GetValue($this->GetIDForIdent("calcBattEnergyLeft"));
+								$calcBattEnergyDiff = $calcBattEnergyLeft - $calcBattEnergyLeftTEMP;
+								if($calcBattEnergyDiff > 0) {
+									$calcBattChargedTemp = GetValue($this->GetIDForIdent("calcBattCharged"));
+									SetValue($this->GetIDForIdent("calcBattCharged"), round($calcBattChargedTemp + abs($calcBattEnergyDiff),1));
+								} if($calcBattEnergyDiff < 0) {
+									$calcBattDisChargedTemp = GetValue($this->GetIDForIdent("calcBattDisCharged"));
+									SetValue($this->GetIDForIdent("calcBattDisCharged"), round($calcBattDisChargedTemp + abs($calcBattEnergyDiff),1));	
+								}
 							}
 
 						} else {
@@ -241,23 +243,49 @@ class TRONITYPlatformAPI extends IPSModule {
 						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'charging' not found in JSON data"); }
 					}	
 
+					$chargeRemainingTime = -1;
 					if(isset($jsonData->chargeRemainingTime)) { 
-						SetValue($this->GetIDForIdent("chargeRemainingTime"), $jsonData->chargeRemainingTime);
+						$chargeRemainingTime = $jsonData->chargeRemainingTime;
 					} else {
 						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'chargeRemainingTime' not found in JSON data"); }
 					}	
+					SetValue($this->GetIDForIdent("chargeRemainingTime"), $chargeRemainingTime);
 
+
+					if(isset($jsonData->plugged)) { 
+						SetValue($this->GetIDForIdent("plugged"), $jsonData->plugged);
+					} else {
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'plugged' not found in JSON data"); }
+					}	
+
+					$chargerPower = -1;
+					if(isset($jsonData->chargerPower)) { 
+						$chargerPower = $jsonData->chargerPower;
+					} else {
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'chargerPower' not found in JSON data"); }
+					}
+					SetValue($this->GetIDForIdent("chargerPower"), $chargerPower);
+
+					$latitude = 0;
 					if(isset($jsonData->latitude)) { 
-						SetValue($this->GetIDForIdent("latitude"), $jsonData->latitude);
+						$latitude =  round(floatval($jsonData->latitude), 5);
 					} else {
 						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'latitude' not found in JSON data"); }
 					}	
+					SetValue($this->GetIDForIdent("latitude"), $latitude);
 
+					$longitude = 0;
 					if(isset($jsonData->longitude)) { 
-						SetValue($this->GetIDForIdent("longitude"), $jsonData->longitude);
+						$longitude = round(floatval($jsonData->longitude), 5);
 					} else {
 						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'longitude' not found in JSON data"); }
 					}	
+					SetValue($this->GetIDForIdent("longitude"), $longitude);
+
+					if(($latitude != 0) AND ($longitude != 0)) {
+						$coordinates = sprintf("%s,%s", $latitude, $longitude);
+						SetValue($this->GetIDForIdent("coordinates"), $coordinates);
+					}
 
 					if(isset($jsonData->timestamp)) { 
 						SetValue($this->GetIDForIdent("timestamp"), round($jsonData->timestamp/1000));
@@ -265,7 +293,12 @@ class TRONITYPlatformAPI extends IPSModule {
 						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'timestamp' not found in JSON data"); }
 					}	
 
-				
+					if(isset($jsonData->lastUpdate)) { 
+						SetValue($this->GetIDForIdent("lastUpdate"), round($jsonData->lastUpdate/1000));
+					} else {
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'timestamp' not found in JSON data"); }
+					}	
+
 					SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
 					if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE"); }
 
@@ -486,24 +519,39 @@ class TRONITYPlatformAPI extends IPSModule {
 
 		if ( !IPS_VariableProfileExists('EV.kWh') ) {
 			IPS_CreateVariableProfile('EV.kWh', VARIABLE::TYPE_FLOAT );
-			IPS_SetVariableProfileDigits('EV.kWh', 1 );
+			IPS_SetVariableProfileDigits('EV.kWh', 1);
 			IPS_SetVariableProfileText('EV.kWh', "", " kWh" );
 			//IPS_SetVariableProfileValues('EV.kWh', 0, 0, 0);
 		} 
 
 		if ( !IPS_VariableProfileExists('EV.kWh_100km') ) {
 			IPS_CreateVariableProfile('EV.kWh_100km', VARIABLE::TYPE_FLOAT );
-			IPS_SetVariableProfileDigits('EV.kWh_100km', 1 );
+			IPS_SetVariableProfileDigits('EV.kWh_100km', 1);
 			IPS_SetVariableProfileText('EV.kWh_100km', "", " kWh/100km" );
 			//IPS_SetVariableProfileValues('EV.kWh_100km', 0, 0, 0);
 		} 			
 
 		if ( !IPS_VariableProfileExists('EV.Percent') ) {
 			IPS_CreateVariableProfile('EV.Percent', VARIABLE::TYPE_FLOAT );
-			IPS_SetVariableProfileDigits('EV.Percent', 1 );
+			IPS_SetVariableProfileDigits('EV.Percent', 1);
 			IPS_SetVariableProfileText('EV.Percent', "", " %" );
 			//IPS_SetVariableProfileValues('EV.Percent', 0, 0, 0);
 		} 	
+
+
+		if ( !IPS_VariableProfileExists('Geo.Latitude.5') ) {
+			IPS_CreateVariableProfile('Geo.Latitude.5', VARIABLE::TYPE_FLOAT );
+			IPS_SetVariableProfileDigits('Geo.Latitude.5', 5);
+			IPS_SetVariableProfileText('Geo.Latitude.5', "", "" );
+			IPS_SetVariableProfileValues('Geo.Latitude.5', -90, 90, 0);
+		} 	
+
+		if ( !IPS_VariableProfileExists('Geo.Longitude.5') ) {
+			IPS_CreateVariableProfile('Geo.Longitude.5', VARIABLE::TYPE_FLOAT );
+			IPS_SetVariableProfileDigits('Geo.Longitude.5', 5);
+			IPS_SetVariableProfileText('Geo.Longitude.5', "", "" );
+			IPS_SetVariableProfileValues('Geo.Longitude.5', -180, 180, 0);
+		} 			
 
 		if($this->logLevel >= LogLevel::TRACE) { $this->AddLog(__FUNCTION__, "Profiles registered"); }
 	}
@@ -512,32 +560,34 @@ class TRONITYPlatformAPI extends IPSModule {
 		
 		$archivInstanzID = IPS_GetInstanceListByModuleID("{43192F0B-135B-4CE7-A0A7-1475603F3060}")[0];
 
-		$varId = $this->RegisterVariableInteger("level", "Batterie Ladezustand", "EV.level", 100);
+
+		$varId = $this->RegisterVariableInteger("odometer", "Odometer", "EV.km", 100);
+
+		$varId = $this->RegisterVariableInteger("level", "Batterie Ladezustand", "EV.level", 110);
 		//AC_SetLoggingStatus($archivInstanzID, $varId, true);
 
-		$varId = $this->RegisterVariableInteger("range", "Geschätzte Reichweite", "EV.km", 110);
+		$varId = $this->RegisterVariableInteger("range", "Geschätzte Reichweite", "EV.km", 120);
 		//AC_SetLoggingStatus($archivInstanzID, $varId, true);			
 
-
 		$varId = $this->RegisterVariableInteger("chargingStatus", "Charging Status", "EV.ChargingStatus", 150);
-		IPS_SetHidden($varId, true);
 
 		$varId = $this->RegisterVariableString("chargingStatusTxt", "Charging Status", "", 151);
-		IPS_SetHidden($varId, true);
 
-		$varId = $this->RegisterVariableInteger("chargeRemainingTime", "Charge Remaining Time", "", 160);
-		IPS_SetHidden($varId, true);
+		$varId = $this->RegisterVariableInteger("chargeRemainingTime", "Charge Remaining Time", "", 180);
 
-		$varId = $this->RegisterVariableInteger("odometer", "Odometer", "EV.km", 200);
-		IPS_SetHidden($varId, true);
+		$varId = $this->RegisterVariableBoolean("plugged", "Plugged", "", 160);
 
-		$varId = $this->RegisterVariableFloat("latitude", "Latitude", "", 210);
-		IPS_SetHidden($varId, true);
+		$varId = $this->RegisterVariableFloat("chargerPower", "ChargerPower", "", 170);
 
-		$varId = $this->RegisterVariableFloat("longitude", "Longitude", "", 220);
-		IPS_SetHidden($varId, true);
+		$varId = $this->RegisterVariableFloat("latitude", "Latitude", "", 200);
+
+		$varId = $this->RegisterVariableFloat("longitude", "Longitude", "", 210);
+
+		$varId = $this->RegisterVariableString("coordinates", "Koordinaten", "", 212);
 
 		$varId = $this->RegisterVariableInteger("timestamp", "Timestamp", "~UnixTimestamp", 300);
+
+		$varId = $this->RegisterVariableInteger("lastUpdate", "LastUpdate", "~UnixTimestamp", 310);
 
 
 		$varId = $this->RegisterVariableFloat("calcBattEnergyLeft", "[calc] verbleibende Batteriekapazität", "EV.kWh", 400);

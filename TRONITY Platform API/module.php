@@ -7,8 +7,11 @@ class TRONITYPlatformAPI extends IPSModule {
 
 	use TRONITY_COMMON;
 
-	const API_URL_Authentication = "https://api-eu.TRONITY.io/oauth/authentication";
-	const API_URL_Bulk = "https://api-eu.TRONITY.io/v1/vehicles/%%vehicleId%%/bulk";
+	//const API_URL_Authentication = "https://api-eu.TRONITY.io/oauth/authentication";
+	//const API_URL_Bulk = "https://api-eu.TRONITY.io/v1/vehicles/%%vehicleId%%/bulk";
+
+	const API_URL_Authentication = "https://api.tronity.tech/authentication";
+	const API_URL_LatRecord = "https://api.tronity.tech/tronity/vehicles/%%vehicleId%%/last_record";
 
 	private $logLevel = 3;
 	private $logCnt = 0;
@@ -114,7 +117,8 @@ class TRONITYPlatformAPI extends IPSModule {
 		$lastUpdate  = time() - round(IPS_GetVariable($this->GetIDForIdent("updateCntError"))["VariableUpdated"]);
 		if ($lastUpdate > $skipUdateSec) {
 
-			$this->UpdateBulk("AutoUpdateTimer");
+			//$this->UpdateBulk("AutoUpdateTimer");
+			$this->LastRecord("AutoUpdateTimer");
 
 		} else {
 			SetValue($this->GetIDForIdent("updateCntSkip"), GetValue($this->GetIDForIdent("updateCntSkip")) + 1);
@@ -124,7 +128,7 @@ class TRONITYPlatformAPI extends IPSModule {
 	}
 
 
-	public function UpdateBulk(string $Text) {
+	public function UpdateBulk_OLD(string $Text) {
 
 		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update Bulk ..."); }
 
@@ -139,6 +143,206 @@ class TRONITYPlatformAPI extends IPSModule {
 					//throw new Exception('! Throw TEST Exception !');
 
 					$apiUrl = self::API_URL_Bulk;
+					$apiUrl = str_replace("%%vehicleId%%", $this->vehicleId, $apiUrl);
+					$api_accessToken = $this->GetApiAccessToken();
+	
+					if($this->logLevel >= LogLevel::COMMUNICATION) { $this->AddLog(__FUNCTION__, sprintf("HTTP_REQUEST: %s", $apiUrl)); }
+
+					$options = array(
+						'http' => array(
+						'method'  => 'GET',
+						'timeout' => 10,
+						'header'=>  "Authorization: Bearer ". $api_accessToken . "\r\n" .
+									"Content-Type: application/json\r\n" .
+									"Accept: application/json\r\n"
+						)
+					);
+
+					$data = $this->RequestHttpData($apiUrl, $options);
+					$jsonData = json_decode($data);
+					
+					if(isset($jsonData->odometer)) { 
+						SetValue($this->GetIDForIdent("odometer"), $jsonData->odometer);
+					} else {
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'odometer' not found in JSON data"); }
+					}
+
+					if(isset($jsonData->level)) { 
+
+						$level = $jsonData->level;
+						SetValue($this->GetIDForIdent("level"), $level);
+
+						if(isset($jsonData->range)) { 
+							$range = $jsonData->range;
+							SetValue($this->GetIDForIdent("range"), $range);
+
+							///
+							// CALC Custom Values
+							if(true) {
+								$calcBattEnergyLeft = 58/100 * $level;
+								SetValue($this->GetIDForIdent("calcBattEnergyLeft"), round($calcBattEnergyLeft,1));
+							
+								$calcConsumption = $calcBattEnergyLeft / $range * 100;
+								SetValue($this->GetIDForIdent("calcConsumption"), round($calcConsumption,1));
+							
+								$calcEstimatedRangeOnFullCharge = $range / $level * 100;
+								SetValue($this->GetIDForIdent("calcEstimatedRangeOnFullCharge"), round($calcEstimatedRangeOnFullCharge));
+							
+								$calcPercentOfWLTP = 100 / 424 * $calcEstimatedRangeOnFullCharge;
+								SetValue($this->GetIDForIdent("calcPercentOfWLTP"), round($calcPercentOfWLTP,1));
+							
+								$calcBattEnergyLeftTEMP = GetValue($this->GetIDForIdent("calcBattEnergyLeft"));
+								$calcBattEnergyDiff = $calcBattEnergyLeft - $calcBattEnergyLeftTEMP;
+								if($calcBattEnergyDiff > 0) {
+									$calcBattChargedTemp = GetValue($this->GetIDForIdent("calcBattCharged"));
+									SetValue($this->GetIDForIdent("calcBattCharged"), round($calcBattChargedTemp + abs($calcBattEnergyDiff),1));
+								} if($calcBattEnergyDiff < 0) {
+									$calcBattDisChargedTemp = GetValue($this->GetIDForIdent("calcBattDisCharged"));
+									SetValue($this->GetIDForIdent("calcBattDisCharged"), round($calcBattDisChargedTemp + abs($calcBattEnergyDiff),1));	
+								}
+							}
+
+						} else {
+							if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'range' not found in JSON data"); }
+						}
+
+					} else {
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'level' not found in JSON data"); }
+					}	
+
+
+					if(isset($jsonData->charging)) { 
+						$charging = $jsonData->charging;
+						SetValue($this->GetIDForIdent("chargingStatusTxt"), $charging);
+				
+						$chargingStatus = -99;
+						switch($charging) {
+							case "Disconnected";
+								$chargingStatus = 0;
+								break;
+							case "NoPower";
+								$chargingStatus = 1;
+								break;		
+							case "Starting";
+								$chargingStatus = 2;
+								break;										
+							case "Charging";
+								$chargingStatus = 3;
+								break;										
+							case "Complete";
+								$chargingStatus = 4;
+								break;										
+							case "Stopped";
+								$chargingStatus = 5;
+								break;										
+							case "Error";
+								$chargingStatus = 10;
+								break;										
+							default:
+								$chargingStatus = 11;
+							break;
+						}
+						SetValue($this->GetIDForIdent("chargingStatus"), $chargingStatus);
+					} else {
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'charging' not found in JSON data"); }
+					}	
+
+					$chargeRemainingTime = -3600;
+					if(isset($jsonData->chargeRemainingTime)) { 
+						$chargeRemainingTime = $jsonData->chargeRemainingTime;
+						if($chargeRemainingTime >=3600) {
+							$chargeRemainingTime = $chargeRemainingTime -3600;
+						}
+					} else {
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'chargeRemainingTime' not found in JSON data"); }
+					}	
+					SetValue($this->GetIDForIdent("chargeRemainingTime"), $chargeRemainingTime);
+
+
+					if(isset($jsonData->plugged)) { 
+						SetValue($this->GetIDForIdent("plugged"), $jsonData->plugged);
+					} else {
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'plugged' not found in JSON data"); }
+					}	
+
+					$chargerPower = -1;
+					if(isset($jsonData->chargerPower)) { 
+						$chargerPower = $jsonData->chargerPower;
+					} else {
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'chargerPower' not found in JSON data"); }
+					}
+					SetValue($this->GetIDForIdent("chargerPower"), $chargerPower);
+
+					$latitude = 0;
+					if(isset($jsonData->latitude)) { 
+						$latitude =  round(floatval($jsonData->latitude), 5);
+					} else {
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'latitude' not found in JSON data"); }
+					}	
+					SetValue($this->GetIDForIdent("latitude"), $latitude);
+
+					$longitude = 0;
+					if(isset($jsonData->longitude)) { 
+						$longitude = round(floatval($jsonData->longitude), 5);
+					} else {
+						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'longitude' not found in JSON data"); }
+					}	
+					SetValue($this->GetIDForIdent("longitude"), $longitude);
+
+					if(($latitude != 0) AND ($longitude != 0)) {
+						$coordinates = sprintf("%s,%s", $latitude, $longitude);
+						SetValue($this->GetIDForIdent("coordinates"), $coordinates);
+					}
+
+					if(isset($jsonData->timestamp)) { 
+						SetValue($this->GetIDForIdent("timestamp"), round($jsonData->timestamp/1000));
+					} else {
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'timestamp' not found in JSON data"); }
+					}	
+
+					if(isset($jsonData->lastUpdate)) { 
+						SetValue($this->GetIDForIdent("lastUpdate"), round($jsonData->lastUpdate/1000));
+					} else {
+						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'timestamp' not found in JSON data"); }
+					}	
+
+					SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
+					if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE"); }
+
+				} catch (Exception $e) {
+					$errorMsg = $e->getMessage();
+					//$errorMsg = print_r($e, true);
+					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
+					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
+					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("Exception occurred :: %s", $errorMsg)); }
+				}
+
+				$duration = $this->CalcDuration_ms($start_Time);
+				SetValue($this->GetIDForIdent("updateLastDuration"), $duration); 
+
+			} else {
+				//SetValue($this->GetIDForIdent("instanzInactivCnt"), GetValue($this->GetIDForIdent("instanzInactivCnt")) + 1);
+				if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, sprintf("Instanz '%s - [%s]' not activ [Status=%s]", $this->InstanceID, IPS_GetName($this->InstanceID), $currentStatus)); }
+			}
+			
+	}
+
+
+	public function LastRecord(string $Text) {
+
+		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Update LastRecord ..."); }
+
+			$currentStatus = $this->GetStatus();
+			if($currentStatus == 102) {		
+			
+				$start_Time = microtime(true);
+
+				try {
+
+					//$a = 0;	$b = 0;	$c = $a / $b;  //Test Try-Catch
+					//throw new Exception('! Throw TEST Exception !');
+
+					$apiUrl = self::API_URL_LatRecord;
 					$apiUrl = str_replace("%%vehicleId%%", $this->vehicleId, $apiUrl);
 					$api_accessToken = $this->GetApiAccessToken();
 	

@@ -74,8 +74,8 @@
     "actions": [
         {
             "type": "Button",
-            "caption": "Update Vehicle Bulk Data",
-            "onClick": "TPA_UpdateBulk($id, '');"
+            "caption": "Update Vehicle LastRecord",
+            "onClick": "TPA_LastRecord($id, '');"
         },
         {
             "type": "ExpansionPanel",

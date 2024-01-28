@@ -113,18 +113,23 @@ class TRONITYPlatformAPI extends IPSModule {
 
 		if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "TimerAutoUpdate_TRONITY called ..."); }
 
-		$skipUdateSec = 600;
-		$lastUpdate  = time() - round(IPS_GetVariable($this->GetIDForIdent("updateCntError"))["VariableUpdated"]);
-		if ($lastUpdate > $skipUdateSec) {
-
-			//$this->UpdateBulk("AutoUpdateTimer");
+		if(true) {
 			$this->LastRecord("AutoUpdateTimer");
-
 		} else {
-			SetValue($this->GetIDForIdent("updateCntSkip"), GetValue($this->GetIDForIdent("updateCntSkip")) + 1);
-			$logMsg =  sprintf("INFO :: Skip Update for %d sec for Instance '%s' [%s] >> last error %d seconds ago...", $skipUdateSec, $this->InstanceID, IPS_GetName($this->InstanceID),  $lastUpdate);
-			if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, $logMsg); }
-		}						
+
+			$skipUdateSec = 600;
+			$lastUpdate  = time() - round(IPS_GetVariable($this->GetIDForIdent("updateCntError"))["VariableUpdated"]);
+			if ($lastUpdate > $skipUdateSec) {
+
+				//$this->UpdateBulk("AutoUpdateTimer");
+				$this->LastRecord("AutoUpdateTimer");
+
+			} else {
+				SetValue($this->GetIDForIdent("updateCntSkip"), GetValue($this->GetIDForIdent("updateCntSkip")) + 1);
+				$logMsg =  sprintf("INFO :: Skip Update for %d sec for Instance '%s' [%s] >> last error %d seconds ago...", $skipUdateSec, $this->InstanceID, IPS_GetName($this->InstanceID),  $lastUpdate);
+				if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, $logMsg); }
+			}	
+		}					
 	}
 
 

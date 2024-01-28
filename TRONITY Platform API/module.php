@@ -243,9 +243,12 @@ class TRONITYPlatformAPI extends IPSModule {
 						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'charging' not found in JSON data"); }
 					}	
 
-					$chargeRemainingTime = -1;
+					$chargeRemainingTime = -3600;
 					if(isset($jsonData->chargeRemainingTime)) { 
 						$chargeRemainingTime = $jsonData->chargeRemainingTime;
+						if($chargeRemainingTime >=3600) {
+							$chargeRemainingTime = $chargeRemainingTime -3600;
+						}
 					} else {
 						if($this->logLevel >= LogLevel::DEBUG) { $this->AddLog(__FUNCTION__, "Property 'chargeRemainingTime' not found in JSON data"); }
 					}	
@@ -573,7 +576,7 @@ class TRONITYPlatformAPI extends IPSModule {
 
 		$varId = $this->RegisterVariableString("chargingStatusTxt", "Charging Status", "", 151);
 
-		$varId = $this->RegisterVariableInteger("chargeRemainingTime", "Charge Remaining Time", "", 180);
+		$varId = $this->RegisterVariableInteger("chargeRemainingTime", "Charge Remaining Time", "~UnixTimestampTime", 180);
 
 		$varId = $this->RegisterVariableBoolean("plugged", "Plugged", "", 160);
 

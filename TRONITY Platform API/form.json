@@ -24,6 +24,16 @@
             ]
         },        
         {
+            "type": "ExpansionPanel",
+            "caption": "Vehicle Settings",
+            "expanded": true,
+            "visible": true,
+            "items": [
+                { "name": "BatteryCapacity", "type": "NumberSpinner", "caption": "Battery capacity net [kWh]", "digits": 1, "minimum": 0, "suffix": " kWh" },
+                { "name": "WltpRange", "type": "NumberSpinner", "caption": "WLTP range [km] (0 = no WLTP calculation)", "minimum": 0, "suffix": " km" }
+            ]
+        },
+        {
             "name": "LogLevel",
             "type": "Select",
             "caption": "Debug/Log Level",

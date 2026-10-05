@@ -62,6 +62,9 @@ class TRONITYPlatformAPI extends IPSModule {
 		$this->RegisterPropertyString("tbGrantType", "app");
 		$this->RegisterPropertyString("tbVehicleId", "");
 
+		$this->RegisterPropertyFloat("BatteryCapacity", 79.0);
+		$this->RegisterPropertyInteger("WltpRange", 424);
+
 		$this->RegisterTimer('TimerAutoUpdate_TRONITY', 0, 'TPA_TimerAutoUpdate_TRONITY($_IPS["TARGET"]);');
 
 		$this->RegisterMessage(0, IPS_KERNELMESSAGE);
@@ -366,6 +369,10 @@ class TRONITYPlatformAPI extends IPSModule {
 					$data = $this->RequestHttpData($apiUrl, $options);
 					$jsonData = json_decode($data);
 					
+					if(!is_object($jsonData)) {
+						throw new Exception(sprintf("Invalid JSON response from TRONITY API: '%s'", substr((string)$data, 0, 200)), 30);
+					}
+
 					if(isset($jsonData->odometer)) { 
 						SetValue($this->GetIDForIdent("odometer"), $jsonData->odometer);
 					} else {
@@ -375,36 +382,58 @@ class TRONITYPlatformAPI extends IPSModule {
 					if(isset($jsonData->level)) { 
 
 						$level = $jsonData->level;
-						SetValue($this->GetIDForIdent("level"), $level);
+
+						// vorherigen Ladezustand merken BEVOR er ueberschrieben wird (fuer calcBattCharged/DisCharged)
+						$levelVarId = $this->GetIDForIdent("level");
+						$levelPrevValid = (IPS_GetVariable($levelVarId)["VariableUpdated"] > 0);
+						$levelPrev = GetValue($levelVarId);
+						SetValue($levelVarId, $level);
 
 						if(isset($jsonData->range)) { 
 							$range = $jsonData->range;
 							SetValue($this->GetIDForIdent("range"), $range);
 
 							///
-							// CALC Custom Values
-							if(true) {
-								$calcBattEnergyLeft = 58/100 * $level;
+							// CALC Custom Values (Batteriegroesse und WLTP aus den Modul-Einstellungen)
+							$battCapacity = $this->ReadPropertyFloat("BatteryCapacity");
+							$wltpRange = $this->ReadPropertyInteger("WltpRange");
+
+							if($battCapacity > 0) {
+								$calcBattEnergyLeft = $battCapacity / 100 * $level;
 								SetValue($this->GetIDForIdent("calcBattEnergyLeft"), round($calcBattEnergyLeft,1));
-							
-								$calcConsumption = $calcBattEnergyLeft / $range * 100;
-								SetValue($this->GetIDForIdent("calcConsumption"), round($calcConsumption,1));
-							
-								$calcEstimatedRangeOnFullCharge = $range / $level * 100;
-								SetValue($this->GetIDForIdent("calcEstimatedRangeOnFullCharge"), round($calcEstimatedRangeOnFullCharge));
-							
-								$calcPercentOfWLTP = 100 / 424 * $calcEstimatedRangeOnFullCharge;
-								SetValue($this->GetIDForIdent("calcPercentOfWLTP"), round($calcPercentOfWLTP,1));
-							
-								$calcBattEnergyLeftTEMP = GetValue($this->GetIDForIdent("calcBattEnergyLeft"));
-								$calcBattEnergyDiff = $calcBattEnergyLeft - $calcBattEnergyLeftTEMP;
-								if($calcBattEnergyDiff > 0) {
-									$calcBattChargedTemp = GetValue($this->GetIDForIdent("calcBattCharged"));
-									SetValue($this->GetIDForIdent("calcBattCharged"), round($calcBattChargedTemp + abs($calcBattEnergyDiff),1));
-								} if($calcBattEnergyDiff < 0) {
-									$calcBattDisChargedTemp = GetValue($this->GetIDForIdent("calcBattDisCharged"));
-									SetValue($this->GetIDForIdent("calcBattDisCharged"), round($calcBattDisChargedTemp + abs($calcBattEnergyDiff),1));	
+
+								if($range > 0) {
+									$calcConsumption = $calcBattEnergyLeft / $range * 100;
+									SetValue($this->GetIDForIdent("calcConsumption"), round($calcConsumption,1));
+								} else {
+									if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, sprintf("range=%s > skip calcConsumption", $range)); }
 								}
+
+								if(($range > 0) AND ($level > 0)) {
+									$calcEstimatedRangeOnFullCharge = $range / $level * 100;
+									SetValue($this->GetIDForIdent("calcEstimatedRangeOnFullCharge"), round($calcEstimatedRangeOnFullCharge));
+
+									if($wltpRange > 0) {
+										$calcPercentOfWLTP = 100 / $wltpRange * $calcEstimatedRangeOnFullCharge;
+										SetValue($this->GetIDForIdent("calcPercentOfWLTP"), round($calcPercentOfWLTP,1));
+									}
+								} else {
+									if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, sprintf("range=%s level=%s > skip calcEstimatedRangeOnFullCharge/calcPercentOfWLTP", $range, $level)); }
+								}
+
+								// geladene/entladene Energie aus der Aenderung des Ladezustands
+								if($levelPrevValid) {
+									$calcBattEnergyDiff = $battCapacity / 100 * ($level - $levelPrev);
+									if($calcBattEnergyDiff > 0) {
+										$calcBattChargedTemp = GetValue($this->GetIDForIdent("calcBattCharged"));
+										SetValue($this->GetIDForIdent("calcBattCharged"), round($calcBattChargedTemp + abs($calcBattEnergyDiff),1));
+									} else if($calcBattEnergyDiff < 0) {
+										$calcBattDisChargedTemp = GetValue($this->GetIDForIdent("calcBattDisCharged"));
+										SetValue($this->GetIDForIdent("calcBattDisCharged"), round($calcBattDisChargedTemp + abs($calcBattEnergyDiff),1));
+									}
+								}
+							} else {
+								if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "BatteryCapacity is 0 > calc values skipped"); }
 							}
 
 						} else {
@@ -413,8 +442,7 @@ class TRONITYPlatformAPI extends IPSModule {
 
 					} else {
 						if($this->logLevel >= LogLevel::WARN) { $this->AddLog(__FUNCTION__, "Property 'level' not found in JSON data"); }
-					}	
-
+					}
 
 					if(isset($jsonData->charging)) { 
 						$charging = $jsonData->charging;
@@ -514,9 +542,8 @@ class TRONITYPlatformAPI extends IPSModule {
 					SetValue($this->GetIDForIdent("updateCntOk"), GetValue($this->GetIDForIdent("updateCntOk")) + 1);  
 					if($this->logLevel >= LogLevel::INFO) { $this->AddLog(__FUNCTION__, "Update IPS Variables DONE"); }
 
-				} catch (Exception $e) {
-					$errorMsg = $e->getMessage();
-					//$errorMsg = print_r($e, true);
+				} catch (\Throwable $e) {
+					$errorMsg = sprintf("%s (Line %d)", $e->getMessage(), $e->getLine());
 					SetValue($this->GetIDForIdent("updateCntError"), GetValue($this->GetIDForIdent("updateCntError")) + 1);  
 					SetValue($this->GetIDForIdent("updateLastError"), $errorMsg);
 					if($this->logLevel >= LogLevel::ERROR) { $this->AddLog(__FUNCTION__, sprintf("Exception occurred :: %s", $errorMsg)); }
@@ -811,7 +838,7 @@ class TRONITYPlatformAPI extends IPSModule {
 		$varId = $this->RegisterVariableInteger("calcEstimatedRangeOnFullCharge", "[calc] Geschätzte Reichweite bei voller Ladung", "EV.km", 402);
 		IPS_SetHidden($varId, true);				
 
-		$varId = $this->RegisterVariableFloat("calcPercentOfWLTP", "[calc] Prozent von WLTP [424km]", "EV.Percent", 403);
+		$varId = $this->RegisterVariableFloat("calcPercentOfWLTP", "[calc] Prozent von WLTP", "EV.Percent", 403);
 		IPS_SetHidden($varId, true);		
 
 		$varId = $this->RegisterVariableFloat("calcBattCharged", "[calc] Batterie geladen", "EV.kWh", 410);
